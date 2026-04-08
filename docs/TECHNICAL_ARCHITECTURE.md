@@ -223,13 +223,23 @@ User Double-Clicks Card
 [Renderer] ──ipc:launchApp(id)──► [Main: launcher.service.ts]
     │                                    │
     │                                    ▼
-    │                              [Get AppImage Path]
+    │                              [Get AppImage Entry]
     │                                    │
     │                                    ▼
     │                              [Make Executable (chmod +x)]
     │                                    │
     │                                    ▼
+    │                              [Build Environment]
+    │                              (merge envVars from properties)
+    │                                    │
+    │                                    ▼
+    │                              [Build Command]
+    │                              (sudo if elevated,
+    │                               sandbox args if sandboxMode)
+    │                                    │
+    │                                    ▼
     │                              [Spawn Child Process]
+    │                              (cwd: workingDirectory)
     │                                    │
     │                                    ▼
     │                              [Capture Output/Errors]
@@ -312,15 +322,20 @@ interface Settings {
 ```typescript
 interface AppImageEntry {
   id: string;           // UUID v4
-  name: string;         // Display name
+  name: string;         // Display name (custom or detected)
   path: string;         // Absolute file path
   iconPath?: string;    // Path to extracted icon
   iconData?: string;    // Base64 fallback
+  customIconPath?: string; // User-assigned custom icon
   size: number;         // File size in bytes
   version?: string;     // AppImage version
   lastLaunched?: Date;  // Last launch timestamp
   launchCount: number;  // Total launches
   customArgs?: string;  // Custom launch arguments
+  workingDirectory?: string; // Custom working directory
+  envVars?: Record<string, string>; // Environment variables
+  elevated?: boolean;   // Run with elevated privileges
+  sandboxMode?: boolean; // Sandboxed execution
   dateAdded: Date;      // When added to index
   fileHash?: string;    // SHA-256 for duplicate detection
 }

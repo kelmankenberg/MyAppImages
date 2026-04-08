@@ -162,11 +162,36 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 
 ---
 
-### FR-8: Recent Applications
+### FR-9: AppImage Properties & Execute Settings
 
 | Field | Description |
 |-------|-------------|
-| **ID** | FR-8 |
+| **ID** | FR-9 |
+| **Title** | View and Edit AppImage Properties |
+| **Priority** | High |
+| **Description** | The system shall allow the user to view and modify properties and execution settings for any indexed AppImage |
+
+**Acceptance Criteria:**
+- [ ] System provides "Properties" option in context menu and via double-click with modifier (e.g., Alt+click)
+- [ ] Properties panel displays: Name, Path, Size, Version, Date Added, Launch Count
+- [ ] User can edit Display Name (custom override)
+- [ ] User can set custom launch arguments (free-form text input)
+- [ ] User can set a custom working directory for execution
+- [ ] User can set environment variables (key-value pairs, add/remove)
+- [ ] User can toggle "Run with elevated privileges" (sudo prompt warning)
+- [ ] User can toggle "Use sandbox mode" (isolated filesystem)
+- [ ] User can assign a custom icon (file picker)
+- [ ] User can reset all properties to detected defaults
+- [ ] Changes are saved and persist across sessions
+- [ ] Properties panel accessible via keyboard shortcut (Alt+Enter)
+
+---
+
+### FR-10: Recent Applications
+
+| Field | Description |
+|-------|-------------|
+| **ID** | FR-10 |
 | **Title** | Recently Launched Section |
 | **Priority** | Low |
 | **Description** | The system shall display recently launched AppImages for quick access |
@@ -179,11 +204,11 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 
 ---
 
-### FR-9: Context Menu
+### FR-11: Context Menu
 
 | Field | Description |
 |-------|-------------|
-| **ID** | FR-9 |
+| **ID** | FR-11 |
 | **Title** | Right-Click Context Menu |
 | **Priority** | Medium |
 | **Description** | The system shall provide context menu options for each AppImage |
@@ -191,14 +216,14 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 **Acceptance Criteria:**
 - [ ] Right-click shows context menu with options:
   - Launch
+  - Properties
   - Open File Location
   - Remove from Index
-  - Edit Properties (name, custom args)
 - [ ] Context menu is visually distinct and styled
 
 ---
 
-### FR-10: System Tray Integration
+### FR-12: System Tray Integration
 
 | Field | Description |
 |-------|-------------|
@@ -222,14 +247,19 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | string | Unique identifier (UUID) |
-| `name` | string | Display name |
+| `name` | string | Display name (custom or detected) |
 | `path` | string | Absolute file path |
 | `icon` | string | Base64 icon or path to extracted icon |
+| `customIconPath` | string | User-assigned custom icon path |
 | `size` | number | File size in bytes |
 | `version` | string | AppImage version (if available) |
 | `lastLaunched` | date | Timestamp of last launch |
 | `launchCount` | number | Number of times launched |
 | `customArgs` | string | Custom launch arguments |
+| `workingDirectory` | string | Custom working directory for execution |
+| `envVars` | object | Key-value environment variables |
+| `elevated` | boolean | Run with elevated privileges (sudo) |
+| `sandboxMode` | boolean | Use sandboxed execution |
 | `dateAdded` | date | When entry was added |
 
 ### 4.2 Settings Object

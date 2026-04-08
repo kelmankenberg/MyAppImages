@@ -68,7 +68,16 @@ Create an intuitive, lightweight desktop launcher that:
 - Category-based filtering (if metadata available)
 - Quick access to frequently used apps
 
-### 5.5 Settings & Configuration
+### 5.5 AppImage Properties & Execution
+- View detailed metadata for any AppImage
+- Customize launch arguments
+- Set custom working directory
+- Configure environment variables
+- Toggle elevated (sudo) execution
+- Toggle sandbox mode
+- Assign custom icons
+
+### 5.6 Settings & Configuration
 - Configure scan directories
 - Customize appearance (theme, icon size, opacity)
 - Configure dock behavior (position, auto-hide)

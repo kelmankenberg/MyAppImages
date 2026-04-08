@@ -252,7 +252,65 @@ Pinned (Always Visible)     Unpinned (Focus Visible)     Unpinned (Hidden)
 └──────────────────────────────┘
 ```
 
-### 4.6 Context Menu
+### 4.8 Properties Panel
+
+| Property | Value |
+|----------|-------|
+| Width | 480px (fixed) |
+| Height | 90% of window |
+| Position | Center modal with dimmed overlay |
+| Close | X button, click outside, ESC key |
+
+```
+┌─────────────────────────────────────────┐
+│ Properties                        [✕]   │
+├─────────────────────────────────────────┤
+│                                         │
+│  ┌──────┐                               │
+│  │ Icon │  AppName                      │
+│  │      │  /home/user/Apps/App.AppImage │
+│  └──────┘                               │
+│  [Change Icon]   [Open Location]        │
+│                                         │
+├─────────────────────────────────────────┤
+│ ▼ General                               │
+│   ├─ Display Name                       │
+│   │  [__________________________]       │
+│   ├─ Version                            │
+│   │  1.2.3 (detected)                   │
+│   ├─ File Size                          │
+│   │  142.5 MB                           │
+│   ├─ Date Added                         │
+│   │  Apr 8, 2026                        │
+│   └─ Launch Count                       │
+│      24                                 │
+├─────────────────────────────────────────┤
+│ ▼ Execution Settings                    │
+│   ├─ Launch Arguments                   │
+│   │  [__________________________]       │
+│   ├─ Working Directory                  │
+│   │  [_____________________]  [Browse]  │
+│   ├─ Environment Variables              │
+│   │  ┌──────────┬──────────┐            │
+│   │  │ KEY      │ VALUE    │  [×]       │
+│   │  ├──────────┼──────────┤            │
+│   │  │ DISPLAY  │ :0       │  [×]       │
+│   │  └──────────┴──────────┘            │
+│   │  [+ Add Variable]                   │
+│   ├─ Run with Elevated Privileges       │
+│   │  [Toggle] ⚠️ Requires password     │
+│   └─ Use Sandboxed Execution            │
+│      [Toggle]                           │
+├─────────────────────────────────────────┤
+│ [Reset to Defaults]  [Save]  [Cancel]   │
+└─────────────────────────────────────────┘
+```
+
+**Toggle States:**
+- Elevated: Off by default, shows warning icon and tooltip
+- Sandbox: Off by default
+
+### 4.9 Context Menu
 
 | Property | Value |
 |----------|-------|
@@ -265,9 +323,9 @@ Pinned (Always Visible)     Unpinned (Focus Visible)     Unpinned (Hidden)
 ```
 ┌──────────────────────┐
 │ ▶ Launch             │
+│ ⚙ Properties         │
 ├──────────────────────┤
 │ 📁 Open File Location│
-│ ✏️ Edit Properties    │
 ├──────────────────────┤
 │ 🗑️ Remove from Index │
 └──────────────────────┘
@@ -373,7 +431,8 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
 |----------|--------|
 | `Ctrl+F` | Focus search input |
 | `Ctrl+,` | Open settings |
-| `ESC` | Close settings, clear search |
+| `Alt+Enter` | Open properties for selected AppImage |
+| `ESC` | Close settings, clear search, close properties |
 | `Enter` | Launch selected AppImage |
 | `↑/↓/←/→` | Navigate grid |
 | `Tab` | Navigate focusable elements |
