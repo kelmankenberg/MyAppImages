@@ -92,10 +92,13 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 **Acceptance Criteria:**
 - [ ] System supports docking to: Top, Bottom, Left, Right
 - [ ] System resizes window appropriately for docked position
-- [ ] System supports auto-hide when docked
-- [ ] System shows window on mouse hover (when auto-hide enabled)
+- [ ] System supports pin/unpin toggle when docked
+- [ ] When **pinned**, the dock remains visible at all times
+- [ ] When **unpinned**, the dock slides out of view when it loses focus
+- [ ] Unpinned dock reappears when mouse hovers over the docked screen edge
+- [ ] Pin state is indicated by a visible toggle icon (pin/pin-off)
 - [ ] System supports undocked/floating mode
-- [ ] System remembers dock position across sessions
+- [ ] System remembers dock position and pin state across sessions
 - [ ] System window stays on top when configured (always-on-top option)
 
 ---
@@ -131,7 +134,7 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 **Acceptance Criteria:**
 - [ ] System allows adding/removing scan directories
 - [ ] System allows configuring dock position
-- [ ] System allows toggling auto-hide
+- [ ] System allows toggling dock pinned/unpinned state
 - [ ] System allows configuring icon size
 - [ ] System allows configuring theme (Light/Dark/System)
 - [ ] System allows configuring window opacity
@@ -235,7 +238,7 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 |-------|------|---------|-------------|
 | `scanDirectories` | string[] | `['~/Applications', '~/AppImages']` | Directories to scan |
 | `dockPosition` | string | `'left'` | Dock position (top/bottom/left/right/none) |
-| `autoHide` | boolean | `false` | Auto-hide dock |
+| `dockPinned` | boolean | `true` | Whether dock stays visible or hides on focus loss |
 | `iconSize` | number | `64` | Icon display size in px |
 | `theme` | string | `'system'` | Theme (light/dark/system) |
 | `windowOpacity` | number | `100` | Window opacity percentage |

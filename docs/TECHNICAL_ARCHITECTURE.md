@@ -296,7 +296,7 @@ User Modifies Settings
 interface Settings {
   scanDirectories: string[];
   dockPosition: 'top' | 'bottom' | 'left' | 'right' | 'none';
-  autoHide: boolean;
+  dockPinned: boolean;
   iconSize: 48 | 64 | 96 | 128;
   theme: 'light' | 'dark' | 'system';
   windowOpacity: number; // 50-100
@@ -416,40 +416,57 @@ function applyDockPosition(
 }
 ```
 
-### 8.3 Auto-Hide Implementation
+### 8.3 Pin/Unpin & Focus-Based Hide
 
 ```typescript
-// Mouse proximity detection for auto-hide
-function setupAutoHide(window: BrowserWindow): void {
-  let isVisible = true;
-  
-  window.on('leave-full-screen', () => {
-    // Check mouse position relative to window
-    const mousePos = screen.getCursorScreenPoint();
-    const bounds = window.getBounds();
-    
-    const isNear = isMouseNearWindow(mousePos, bounds);
-    
-    if (!isNear && !isVisible) {
-      window.show();
-      isVisible = true;
-    }
+// When unpinned, hide dock on blur; when pinned, always visible
+function setupDockVisibility(window: BrowserWindow, settings: Settings): void {
+  let hidden = false;
+
+  if (settings.dockPinned || settings.dockPosition === 'none') return;
+
+  // Hide on focus loss
+  window.on('blur', () => {
+    if (settings.dockPinned) return;
+    hidden = true;
+    window.hide();
   });
-  
-  // Periodic check for mouse proximity
+
+  // Reveal on mouse proximity to docked edge
+  const dockEdge = getDockEdge(settings.dockPosition);
+  const threshold = 10; // px
+
   setInterval(() => {
+    if (!hidden) return;
     const mousePos = screen.getCursorScreenPoint();
-    const bounds = window.getBounds();
-    const isNear = isMouseNearWindow(mousePos, bounds, 10); // 10px threshold
+    const display = screen.getPrimaryDisplay().workArea;
     
-    if (isNear && !isVisible) {
+    const nearEdge = isMouseNearEdge(mousePos, display, dockEdge, threshold);
+    
+    if (nearEdge) {
+      hidden = false;
       window.show();
-      isVisible = true;
-    } else if (!isNear && isVisible) {
-      window.hide();
-      isVisible = false;
     }
   }, 100);
+}
+
+function getDockEdge(position: DockPosition): 'top' | 'bottom' | 'left' | 'right' {
+  return position === 'none' ? 'left' : position;
+}
+
+function isMouseNearEdge(
+  mouse: {x: number, y: number},
+  workArea: Rectangle,
+  edge: string,
+  threshold: number
+): boolean {
+  switch (edge) {
+    case 'left':   return mouse.x <= threshold && mouse.y >= workArea.y && mouse.y <= workArea.y + workArea.height;
+    case 'right':  return mouse.x >= workArea.x + workArea.width - threshold;
+    case 'top':    return mouse.y <= threshold;
+    case 'bottom': return mouse.y >= workArea.y + workArea.height - threshold;
+    default: return false;
+  }
 }
 ```
 

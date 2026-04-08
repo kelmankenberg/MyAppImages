@@ -129,17 +129,21 @@ This document defines the user interface and user experience design for the AppI
 └─────────────────────────────────────────────┘
 ```
 
-### 3.3 Auto-Hide Behavior
+### 3.3 Pin/Unpin Behavior
 
 ```
-Docked (Visible)          Docked (Hidden)
-┌────────┐                ┌────────┐
-│        │                │        │
-│  APP   │                │        │
-│  GRID  │      →         │  >     │  ← Thin peek tab
-│        │                │        │
-│        │                │        │
-└────────┘                └────────┘
+Pinned (Always Visible)     Unpinned (Focus Visible)     Unpinned (Hidden)
+┌──────────┐                ┌──────────┐                 ┌──────────┐
+│          │                │          │                 │          │
+│  APP     │                │  APP     │                 │          │
+│  GRID    │     blur →     │  GRID    │  mouse to  →   │    >     │ ← Peek tab
+│          │                │          │     edge        │          │
+│  [📌]    │                │  [📌/ ]   │                │  [📌/ ]  │
+└──────────┘                └──────────┘                 └──────────┘
+
+• Pin icon (📌) in toolbar toggles between pinned/unpinned
+• When unpinned, dock hides on blur and reappears on mouse hover at docked edge
+• When pinned, dock remains visible regardless of focus
 ```
 
 ---
@@ -163,6 +167,7 @@ Docked (Visible)          Docked (Hidden)
 | Height | 48px |
 | Background | Theme secondary color |
 | Search Input | Full-width with icon, placeholder text |
+| Pin Button | Pin/unpin toggle icon |
 | Settings Button | Right-aligned, gear icon |
 
 ### 4.3 AppImage Card
@@ -230,7 +235,7 @@ Docked (Visible)          Docked (Hidden)
 │   │   ( ) Top  (•) Left     │
 │   │   ( ) Right ( ) Bottom  │
 │   │   ( ) None (Floating)   │
-│   ├─ Auto-Hide              │
+│   ├─ Pinned                 │
 │   │   [Toggle]               │
 │   └─ Always on Top          │
 │       [Toggle]               │
