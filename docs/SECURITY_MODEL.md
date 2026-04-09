@@ -322,13 +322,31 @@ Block setting variables that could compromise security:
 
 ```typescript
 const BLOCKED_ENV_VARS = [
+  // Dynamic linker (LD_*) — injection vectors
   'LD_PRELOAD',
   'LD_LIBRARY_PATH',
+  'LD_AUDIT',
+  'LD_DEBUG',
+  'LD_ORIGIN_PATH',
+  'LD_BIND_NOW',
+  'LD_BIND_NOW',
+  // Privilege escalation
   'PATH',
   'HOME',
   'USER',
   'SUDO_UID',
   'SUDO_GID',
+  'SUDO_COMMAND',
+  'SUDO_USER',
+  // IPC / session (could be used for lateral attacks)
+  'XDG_RUNTIME_DIR',
+  'DBUS_SESSION_BUS_ADDRESS',
+  'SSH_AUTH_SOCK',
+  'SSH_AGENT_PID',
+  // Secrets that may leak to child processes
+  'GITHUB_TOKEN',
+  'GH_TOKEN',
+  'AWS_SECRET_ACCESS_KEY',
 ];
 
 function validateEnvVars(vars: Record<string, string>): string[] {
@@ -339,6 +357,55 @@ function validateEnvVars(vars: Record<string, string>): string[] {
 ```
 
 If blocked variables are detected, warn the user and refuse to save.
+
+### 10.3 Environment Whitelist Approach
+
+Rather than passing the entire parent environment, a **whitelist approach** is safer for v1.0:
+
+```typescript
+const ALLOWED_ENV_VARS = [
+  'DISPLAY',
+  'WAYLAND_DISPLAY',
+  'XDG_CURRENT_DESKTOP',
+  'XDG_SESSION_TYPE',
+  'LANG',
+  'LANGUAGE',
+  'LC_ALL',
+  'TERM',
+  'HOME',         // Needed by many AppImages
+  'USER',         // Needed by many AppImages
+  'PATH',         // Needed for finding system tools
+  'XDG_DATA_DIRS',
+  'XDG_CONFIG_DIRS',
+  'GTK_THEME',
+  'QT_STYLE_OVERRIDE',
+  'PULSE_SERVER', // Audio
+  'PIPEWIRE_LATENCY', // Audio
+];
+
+function buildSecureEnvironment(entry: AppImageEntry): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  
+  for (const key of ALLOWED_ENV_VARS) {
+    if (process.env[key]) {
+      env[key] = process.env[key];
+    }
+  }
+  
+  // Merge user-defined env vars (already validated against BLOCKED list)
+  if (entry.envVars) {
+    Object.assign(env, entry.envVars);
+  }
+  
+  return env;
+}
+```
+
+**Trade-off:** Some AppImages may need environment variables not on the whitelist. Users can add them via the custom env vars UI. This is safer than passing everything.
+
+### 10.4 GUI Display Variables
+
+`DISPLAY` and `WAYLAND_DISPLAY` are **required** for GUI AppImages to work. They are always passed (on the whitelist). Sandboxed execution via firejail also forwards these by default.
 
 ---
 

@@ -341,6 +341,18 @@ interface IpcError {
 - `scan-appimages` has a **60-second** timeout (large directories)
 - Timed-out invocations reject with `{ code: 'IPC_TIMEOUT', message: 'Request timed out' }`
 
+### 5.4 Queue Behavior
+
+| Channel | Queue Behavior |
+|---------|---------------|
+| `scan-appimages` | Serialized — only one scan at a time. Subsequent requests queued (max 3). See [TECHNICAL_ARCHITECTURE.md §16.1](./TECHNICAL_ARCHITECTURE.md) |
+| `launch-appimage` | Parallel — multiple launches allowed simultaneously |
+| `save-settings` | Serialized — writes are atomic; overlapping saves are coalesced |
+| `add-appimage` | Serialized — one at a time to prevent index corruption |
+| `remove-appimage` | Serialized — one at a time |
+| `update-appimage-properties` | Serialized per entry ID; different entries can update in parallel |
+| All others | Parallel |
+
 ---
 
 ## 6. Security Constraints

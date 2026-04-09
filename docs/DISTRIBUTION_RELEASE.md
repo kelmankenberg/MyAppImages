@@ -59,7 +59,23 @@ This document defines how the AppImage Launcher itself will be packaged, distrib
 
 ## 3. Build Configuration
 
-### 3.1 electron-builder Config
+### 3.1 Electron Version Policy
+
+**Pinned version:** Electron 33.x LTS (current LTS as of April 2026)
+
+**Upgrade policy:**
+- Upgrade to new Electron LTS within 30 days of stable release
+- Test on all primary targets before upgrading
+- Node.js version follows Electron's bundled Node version
+
+**Current requirements:**
+| Requirement | Version |
+|-------------|---------|
+| Electron | 33.x |
+| Node.js | 20.x LTS (minimum) |
+| npm | 10.x |
+
+### 3.2 electron-builder Config
 
 ```json
 {
@@ -262,18 +278,66 @@ async function checkForUpdates(): Promise<UpdateInfo | null> {
 
 ---
 
-## 8. Code Signing
+## 8. Desktop Integration
 
-### 8.1 Linux Code Signing
+### 8.1 .deb Package
 
-Linux does not require code signing for AppImage or `.deb` distribution. However:
+The `.deb` package **includes** a `.desktop` entry, integrating with the system application menu. This is **in scope** for v1.0.
+
+```desktop
+[Desktop Entry]
+Name=MyAppImages
+Comment=Launch and manage AppImage applications
+Exec=/usr/bin/myappimages
+Icon=myappimages
+Terminal=false
+Type=Application
+Categories=Utility;Development;
+Keywords=AppImage;Launcher;Apps;
+```
+
+### 8.2 AppImage Distribution
+
+The AppImage distribution does **not** automatically create a `.desktop` entry. On first run, the app offers to create one:
+
+```
+┌──────────────────────────────────────────┐
+│ Add to Application Menu?                 │
+├──────────────────────────────────────────┤
+│                                          │
+│ MyAppImages is running as an AppImage.   │
+│ Would you like to add it to your         │
+│ application menu for easy access?        │
+│                                          │
+├──────────────────────────────────────────┤
+│  [Not Now]         [Add to Menu]         │
+└──────────────────────────────────────────┘
+```
+
+If the user agrees, a `.desktop` file is created at:
+```
+~/.local/share/applications/myappimages.desktop
+```
+
+### 8.3 Resolution of PRD Contradiction
+
+The PRD originally listed "Integration with system application menu" as out of scope. This has been clarified:
+- **.deb distribution:** System menu integration is included (automatic)
+- **AppImage distribution:** System menu integration is opt-in (offered on first run)
+- The feature is **in scope** but the mechanism differs by distribution format.
+
+---
+
+## 9. Code Signing
+
+### 9.1 Linux Code Signing
 
 - `.deb` packages can be signed with GPG for repository distribution
 - AppImages have no signing standard (though AppImage authors often sign with GPG)
 
 **v1.0 Decision:** No code signing. Rely on GitHub Releases for distribution integrity.
 
-### 8.2 Future: GPG Signing
+### 9.2 Future: GPG Signing
 
 For PPA and official repository distribution:
 

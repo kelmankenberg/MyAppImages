@@ -477,4 +477,191 @@ APPIMAGE_EXTRACT_AND_RUN=1 ./MyApp.AppImage --appimage-extract
 
 ---
 
+## 11. FUSE Mount Leak Prevention & Cleanup
+
+### 11.1 The Problem
+
+When using `--appimage-mount`, FUSE mount points are created under `/tmp/.mount_*`. If the extraction process crashes or is killed (SIGKILL), these mounts are left behind. Over time this fills `/tmp` and degrades system performance.
+
+### 11.2 Prevention: try/finally Guards
+
+Every mount operation is wrapped in a try/finally that guarantees cleanup:
+
+```typescript
+async function extractViaMount(path: string): Promise<AppImageMetadata> {
+  let mountPoint: string | null = null;
+  try {
+    mountPoint = await mountAppImage(path);
+    return await readMetadataFromMount(mountPoint);
+  } finally {
+    if (mountPoint) {
+      await safeUnmount(mountPoint);
+    }
+  }
+}
+```
+
+### 11.3 Unmount Strategy
+
+Try `fusermount` first, fall back to `umount`:
+
+```typescript
+async function safeUnmount(mountPoint: string): Promise<void> {
+  try {
+    await exec(`fusermount -u "${mountPoint}"`);
+  } catch {
+    try {
+      await exec(`umount "${mountPoint}"`);
+    } catch {
+      logger.warn(`Failed to unmount: ${mountPoint}`);
+      // Schedule for later cleanup
+      staleMounts.add(mountPoint);
+    }
+  }
+}
+```
+
+### 11.4 Periodic Stale Mount Detection
+
+On startup and every 5 minutes, scan for stale mounts owned by this app:
+
+```typescript
+async function cleanStaleMounts(): Promise<void> {
+  const output = await exec('mount | grep "/tmp/.mount_"');
+  const mounts = output.stdout.split('\n').filter(Boolean);
+  
+  for (const line of mounts) {
+    const match = line.match(/on (\/tmp\/\.mount_[^\s]+)/);
+    if (match) {
+      const mountPath = match[1];
+      // Check if any process is using this mount
+      try {
+        await exec(`lsof +D "${mountPath}"`);
+        // In use, skip
+      } catch {
+        // Not in use, unmount
+        await exec(`fusermount -u "${mountPath}"`);
+        logger.info(`Cleaned stale mount: ${mountPath}`);
+      }
+    }
+  }
+}
+```
+
+### 11.5 Concurrent Mount Limit
+
+Maximum **3 concurrent mounts** at any time. Additional requests are queued:
+
+```typescript
+const mountSemaphore = new Semaphore(3);
+
+async function limitedMount(path: string): Promise<string> {
+  await mountSemaphore.acquire();
+  try {
+    return await mountAppImage(path);
+  } finally {
+    mountSemaphore.release();
+  }
+}
+```
+
+---
+
+## 12. Hash Computation Timing
+
+### 12.1 The Cost Problem
+
+SHA-256 hashing a 200 MB AppImage takes ~500ms. On a directory with 100 AppImages, that's 50 seconds just for hashing — unacceptable.
+
+### 12.2 mtime Pre-Check Strategy
+
+Use file modification time as a fast pre-check before hashing:
+
+```typescript
+async function needsRehash(entry: AppImageEntry, filePath: string): Promise<boolean> {
+  const stats = await fs.stat(filePath);
+  const mtimeMs = stats.mtimeMs;
+  
+  // If mtime hasn't changed, hash hasn't changed
+  if (entry.lastMtimeCheck === mtimeMs) {
+    return false;
+  }
+  
+  // mtime changed — compute hash
+  const hash = await hashFile(filePath);
+  entry.lastMtimeCheck = mtimeMs;
+  
+  return hash !== entry.fileHash;
+}
+```
+
+### 12.3 When Hash is Computed
+
+| Scenario | Hash Computed? |
+|----------|---------------|
+| First-time index of a file | ✅ Yes |
+| mtime unchanged since last scan | ❌ Skip |
+| mtime changed | ✅ Yes |
+| File deleted and re-added | ✅ Yes |
+| User requests "Force Rescan" | ✅ Yes |
+
+### 12.4 Hash on Demand
+
+The hash is computed lazily (only when needed for cache validation or duplicate detection), not during every scan pass.
+
+---
+
+## 13. AppImage Type 1 Support
+
+### 13.1 Differences from Type 2
+
+| Property | Type 1 | Type 2 |
+|----------|--------|--------|
+| Filesystem | ISO 9660 | squashfs |
+| Magic | `7f 45 4c 46` + ISO marker | `7f 45 4c 46` + `hsqs` marker |
+| `--appimage-extract` | ❌ Not supported | ✅ Supported |
+| `--appimage-mount` | ✅ Supported | ✅ Supported |
+| Extraction method | Mount only | Extract or mount |
+
+### 13.2 Type 1 Extraction Path
+
+Since `--appimage-extract` doesn't work on Type 1, the only reliable method is `--appimage-mount`:
+
+```typescript
+async function extractType1(path: string): Promise<AppImageMetadata> {
+  // Type 1: must use mount
+  const mountPoint = await mountAppImage(path);
+  try {
+    return await readMetadataFromMount(mountPoint);
+  } finally {
+    await safeUnmount(mountPoint);
+  }
+}
+```
+
+### 13.3 Type 1 Fallback Chain
+
+```
+Type 1 AppImage
+    │
+    ├──► --appimage-mount
+    │       └──► Parse .desktop + .DirIcon
+    │
+    └──► Fail → Binary parsing (strings search)
+            └──► Name + version only, default icon
+```
+
+### 13.4 Type 1 Testing
+
+Type 1 AppImages are tested in the compatibility matrix with:
+- [ ] Successful mount and metadata extraction
+- [ ] No stale mount after failed extraction
+- [ ] Correct type identification
+
+### 13.5 Prevalence
+
+Type 1 AppImages represent < 5% of the current ecosystem. Most are from 2016 or earlier. Support is required by the PRD but the primary optimization targets Type 2.
+
+---
+
 *Document End*

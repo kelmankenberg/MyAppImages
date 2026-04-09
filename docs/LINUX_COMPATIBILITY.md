@@ -235,6 +235,58 @@ interface CompatibilityReport {
 
 Log warnings but **never block startup** due to compatibility issues. Display warnings in Settings → Advanced.
 
+### 3.8 Multi-Monitor
+
+| Desktop | Support | Notes |
+|---------|---------|-------|
+| GNOME | ✅ Full | `getDisplayNearestPoint()` works reliably |
+| KDE Plasma | ✅ Full | Multi-monitor positioning stable |
+| XFCE | ⚠️ Partial | Display bounds may be inaccurate with certain drivers |
+| Cinnamon | ✅ Full | Works well |
+| Sway | ⚠️ Partial | Display coordinates may differ from X11 expectations |
+
+**Strategy:** Dock anchors to the display containing the mouse cursor via `screen.getDisplayNearestPoint()`. On display removal, reposition to primary display. See [TECHNICAL_ARCHITECTURE.md §15](./TECHNICAL_ARCHITECTURE.md).
+
+### 3.9 HiDPI / Fractional Scaling
+
+| Desktop | Support | Notes |
+|---------|---------|-------|
+| GNOME | ✅ Full | `devicePixelRatio` reported correctly at 100%/125%/150%/200% |
+| KDE Plasma | ✅ Full | Fractional scaling supported in Plasma 5.27+ |
+| XFCE | ⚠️ Partial | No native fractional scaling; integer scaling only (1x/2x) |
+| Cinnamon | ✅ Full | Fractional scaling available |
+| Sway | ⚠️ Partial | Output scale factor is integer-only |
+
+**Strategy:** All UI dimensions are specified in CSS (logical) pixels. Electron's `devicePixelRatio` handles the conversion. Icon sizes are logical pixels. Test at 1x, 1.25x, 1.5x, and 2x. See [UI_UX_DESIGN.md §10](./UI_UX_DESIGN.md).
+
+### 3.10 Wayland Support
+
+| Feature | X11 | Wayland | Notes |
+|---------|-----|---------|-------|
+| Window positioning | ✅ Full | ⚠️ Partial | WM may override `setBounds()` |
+| Frameless windows | ✅ Full | ⚠️ Partial | Server-side decorations may appear |
+| Always-on-top | ✅ Full | ⚠️ Partial | Depends on compositor support |
+| Transparency | ✅ Full | ✅ Full | Works with Wayland compositor |
+| System tray | Varies | ⚠️ Requires SNI protocol | `StatusNotifierItem` support varies |
+| Mouse position polling | ✅ Full | ⚠️ Limited | `screen.getCursorScreenPoint()` may be restricted |
+| Focus/blur events | ✅ Full | ⚠️ Partial | Wayland's focus model differs |
+
+**Strategy:**
+1. Detect Wayland via `$WAYLAND_DISPLAY` or `$XDG_SESSION_TYPE=wayland`
+2. If Wayland detected and Electron version >= 28, launch with `--ozone-platform=wayland`
+3. If Wayland detection fails and X11 is available, use X11 (default)
+4. If Wayland-exclusive with no XWayland, show a warning on first launch
+5. For mouse position polling on Wayland: if `getCursorScreenPoint()` returns (0,0) or stale values, disable unpinned auto-hide and notify user
+
+```typescript
+function isWayland(): boolean {
+  return !!(
+    process.env.WAYLAND_DISPLAY ||
+    process.env.XDG_SESSION_TYPE === 'wayland'
+  );
+}
+```
+
 ---
 
 ## 7. Testing Requirements
@@ -250,20 +302,23 @@ Log warnings but **never block startup** due to compatibility issues. Display wa
 - Xubuntu 24.04 (XFCE)
 - Ubuntu MATE 24.04
 - Arch Linux (Sway/i3)
-- Fedora 40 (GNOME)
+- Fedora 40 (GNOME on Wayland)
 
-### 7.3 Test Checklist per Environment
+### 7.3 HiDPI Testing
 
-- [ ] Window renders correctly (no decoration artifacts)
-- [ ] Transparency/opacity works (or graceful fallback)
-- [ ] Dock positioning works on all 4 edges
-- [ ] Pin/unpin toggle works
-- [ ] Unpinned hide-on-blur works
-- [ ] System tray icon appears (or graceful degradation)
-- [ ] Theme switching works
-- [ ] Launching an AppImage works
-- [ ] "Open File Location" opens correct file manager
-- [ ] Settings persist across restart
+Test configurations:
+- [ ] 1080p @ 100% (1x)
+- [ ] 1440p @ 125%
+- [ ] 4K @ 200% (2x)
+- [ ] Mixed DPI (primary 1x, secondary 2x)
+
+### 7.4 Multi-Monitor Testing
+
+- [ ] Single display (baseline)
+- [ ] Dual display, same resolution
+- [ ] Dual display, different resolutions
+- [ ] Dual display, different orientations
+- [ ] Display disconnect during operation
 
 ---
 
@@ -273,7 +328,7 @@ These are explicitly not supported for v1.0:
 
 | Configuration | Reason |
 |---------------|--------|
-| Wayland-exclusive systems without XWayland | Electron Wayland support is incomplete |
+| Wayland-exclusive systems without XWayland AND Electron < 28 | Electron Wayland support requires v28+ |
 | Headless/server environments | No display server |
 | Custom/minimal WMs without EWMH support (e.g., `dwm`, `herbstluftwm`) | Window positioning impossible |
 | Remote desktop sessions | Transparency and positioning are unreliable |

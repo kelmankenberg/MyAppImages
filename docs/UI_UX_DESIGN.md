@@ -353,6 +353,7 @@ Pinned (Always Visible)     Unpinned (Focus Visible)     Unpinned (Hidden)
 | `--bg-tertiary` | `#EEEEEE` | Cards, inputs |
 | `--text-primary` | `#212121` | Primary text |
 | `--text-secondary` | `#757575` | Secondary text |
+| `--text-status` | `#616161` | Status bar text (AA compliant at 11px) |
 | `--accent` | `#1976D2` | Links, buttons, highlights |
 | `--accent-hover` | `#1565C0` | Hover state |
 | `--border` | `#E0E0E0` | Borders, dividers |
@@ -407,6 +408,43 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
 | `--space-md` | 16px | Standard gaps |
 | `--space-lg` | 24px | Section gaps |
 | `--space-xl` | 32px | Major sections |
+
+---
+
+## 7.1 HiDPI / Fractional Scaling
+
+All dimensions in this document are **logical pixels** (CSS pixels). Electron's `devicePixelRatio` converts to physical pixels automatically.
+
+| DPR | Example Display | Behavior |
+|-----|----------------|----------|
+| 1.0 | 1920×1080 @ 100% | Base scale, all values as specified |
+| 1.25 | 2560×1440 @ 125% | UI elements 25% larger in physical pixels |
+| 1.5 | 2880×1620 @ 150% | UI elements 50% larger in physical pixels |
+| 2.0 | 3840×2160 @ 200% | UI elements 2x larger in physical pixels (Retina) |
+
+**Icon sizes in logical pixels (same across DPR):**
+
+| Logical Size | Physical at 1x | Physical at 2x |
+|-------------|---------------|----------------|
+| 48px | 48×48 | 96×96 |
+| 64px | 64×64 | 128×128 |
+| 96px | 96×96 | 192×192 |
+| 128px | 128×128 | 256×256 |
+
+**Window constraints (logical pixels, DPR-independent):**
+
+| Property | Value |
+|----------|-------|
+| Minimum Width | 320px |
+| Minimum Height | 240px |
+| Default Width | 800px |
+| Default Height | 600px |
+
+**Testing requirements:** Verify UI at 1x, 1.25x, 1.5x, and 2x scaling. Check for:
+- Text clipping or overflow
+- Icon pixelation (icons should be provided at 2x resolution)
+- Touch target sizes (minimum 24×24 logical pixels)
+- Layout breakage at non-integer DPR values
 
 ---
 
@@ -551,12 +589,61 @@ columns = floor((containerWidth - padding * 2) / (cardSize + gap))
 
 ## 14. Accessibility Requirements
 
+### 14.1 Keyboard Navigation
+
 - All interactive elements must be keyboard accessible
 - Color contrast ratio minimum 4.5:1 (WCAG AA)
 - Focus indicators visible on all interactive elements
 - ARIA labels on icon-only buttons
-- Screen reader friendly structure
+- Screen reader friendly structure (semantic HTML, heading hierarchy)
 - Skip navigation option
+
+### 14.2 ARIA Live Regions
+
+Async events must announce themselves to screen readers:
+
+| Event | ARIA Role | Announcement |
+|-------|-----------|-------------|
+| Scan complete | `aria-live="polite"` | "Scan complete. Found X AppImages." |
+| Launch success | `aria-live="polite"` | "Launching AppName." |
+| Launch failure | `aria-live="assertive"` | "Failed to launch AppName. Error: details." |
+| Settings saved | `aria-live="polite"` | "Settings saved." |
+| No search results | `aria-live="polite"` | "No results found." |
+
+### 14.3 Focus Management
+
+- **Focus trap:** Settings and Properties panels trap focus while open (Tab cycles within panel)
+- **Focus restoration:** When a modal closes, focus returns to the element that opened it
+- **Focus visibility:** 2px outline with 2px offset, high-contrast color
+
+### 14.4 Reduced Motion
+
+Respect `prefers-reduced-motion` media query:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+- All animations reduce to near-instant when preference is set
+- Dock slide-in/out still occurs (functional, not decorative)
+
+### 14.5 Verified Contrast Ratios
+
+| Combination | Foreground | Background | Ratio | Pass |
+|-------------|-----------|------------|-------|------|
+| Light / Primary text | #212121 | #FFFFFF | 16.1:1 | ✅ AAA |
+| Light / Secondary text | #757575 | #FFFFFF | 4.67:1 | ✅ AA |
+| Light / Status bar text | #757575 | #EEEEEE | 3.7:1 | ⚠️ AA at 14px+ only |
+| Dark / Primary text | #E0E0E0 | #1E1E1E | 13.5:1 | ✅ AAA |
+| Dark / Secondary text | #9E9E9E | #1E1E1E | 7.3:1 | ✅ AAA |
+| Dark / Status bar text | #9E9E9E | #383838 | 4.8:1 | ✅ AA |
+
+**Status bar text at 11px:** Light theme needs adjustment. Use `#616161` (5.7:1) instead of `#757575`.
 
 ---
 

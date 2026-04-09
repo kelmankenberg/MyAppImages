@@ -8,33 +8,7 @@ This is a living document. Add items here as they come up during planning or dev
 
 ## 🔓 Open
 
-| # | Item | Impact | Notes |
-|---|------|--------|-------|
-| 6 | Data Persistence & Migration | High | No schema versioning or migration strategy for index.json/settings.json. What happens when fields change between releases? |
-| 7 | Multi-Monitor Support | High | Dock positioning uses `getPrimaryDisplay()` — breaks on multi-monitor setups. Need to define which display the dock anchors to and behavior on display disconnect. |
-| 8 | HiDPI / Fractional Scaling | Medium | Fixed pixel values (32px title bar, 800×600 default) render too small on 125%/150%/200% scaling. Need DPR-aware sizing. |
-| 9 | AppImage Process Lifecycle | High | Launched AppImages become child processes. No discussion of zombie handling, duplicate launch prevention, crash notification, or `detached`/`setsid` usage. |
-| 10 | FUSE Mount Leak / Resource Cleanup | Medium | Stale `/tmp/.mount_*` directories left behind on crash. Need periodic cleanup and `fusermount` fallback. |
-| 11 | Concurrency & Race Conditions | High | Scanner + launcher race, settings debounce data loss, scan queue mechanism, file existence re-check before launch. |
-| 12 | Internationalization (i18n) | Low | Zero mention of i18n. Decide: out of scope for v1.0 or include translation framework? Date/number formatting conventions needed. |
-| 13 | Accessibility Gaps | Medium | Missing: ARIA live regions for async events, focus trap in modals, focus restoration, `prefers-reduced-motion`, verified contrast ratios. |
-| 14 | Electron Version Pinning | Medium | Docs say "Latest LTS" but package.json pins `^28.2.0` (outdated). Need specific pinned version + upgrade policy. |
-| 15 | libappimage Dependency Contradiction | High | Architecture lists `libappimage (via NAPI)` as dependency, but extraction doc says no N-API binding exists. Must reconcile. |
-| 16 | Testing Strategy for Electron | Medium | Main process code is hard to unit test. CI is headless (no display). Need xvfb-run strategy and mock AppImage fixtures. |
-| 17 | Error Recovery & Self-Healing | Medium | Stale index entries, broken icon cache, corrupt settings — no self-healing behavior defined. |
-| 18 | Large Index Performance | Medium | No virtualization strategy defined. No max tested index size. Full index replacement over IPC on every scan is O(n). |
-| 19 | Configuration Backup & Restore | Medium | PRD lists "import/export config" but no FR exists. Format, conflict resolution, and cross-machine portability undefined. |
-| 20 | Desktop Integration Contradiction | Medium | PRD says "system menu integration out of scope" but .deb includes a .desktop file. AppImage distribution has no menu entry. |
-| 21 | Auto-Discovery Mechanism | High | PRD says "auto-discovery of new AppImages" but no design for inotify vs polling. FR-6 mentions `[Auto] [Manual]` refresh with no spec. |
-| 22 | Hash Computation Timing | Medium | File hash used for duplicate detection and cache invalidation, but hashing 200MB files on every scan is expensive. Need mtime pre-check strategy. |
-| 23 | Environment Variable Security | High | Blocked env var list is incomplete (`LD_AUDIT`, `LD_DEBUG`, `XDG_RUNTIME_DIR`). Launcher passes full environment — could leak tokens/keys. |
-| 24 | Wayland Support | High | Fedora/GNOME default to Wayland. Electron Wayland support exists but window positioning, always-on-top, and mouse polling break. Need detection and adaptation. |
-| 25 | Uninstall / Cleanup Behavior | Low | No discussion of data left behind after removal. Settings, index, icons, logs all persist. |
-| 26 | Crash Recovery | Medium | Index file has no backup strategy or atomic write. Corrupt index loses all user-customized properties. |
-| 27 | AppImage Type 1 Support Depth | Medium | PRD requires Type 1 support but extraction methods (`--appimage-extract`, `--appimage-mount`) are Type 2 only. Type 1 path undefined. |
-| 28 | Dock Size Recalculation on Display Changes | Low | No subscription to display metrics changes. Panel/taskbar appearing/disappearing not handled. |
-| 29 | Keyboard Shortcut Conflicts | Low | `Alt+Enter` and `Alt+F4` may conflict with DE shortcuts or non-US keyboard layouts. Configurable shortcuts? |
-| 30 | Logging Levels & Categories | Low | Log levels (`debug`, `info`, `warn`, `error`) not defined per module. Security events not tagged for audit. |
+_(Nothing currently. Add considerations here as they arise.)_
 
 ---
 
@@ -47,6 +21,31 @@ This is a living document. Add items here as they come up during planning or dev
 | 3 | AppImage Metadata Extraction Deep Dive | [`APPIMAGE_EXTRACTION.md`](./APPIMAGE_EXTRACTION.md) | 2026-04-08 |
 | 4 | Distribution & Release Strategy | [`DISTRIBUTION_RELEASE.md`](./DISTRIBUTION_RELEASE.md) | 2026-04-08 |
 | 5 | Security & Permissions Model | [`SECURITY_MODEL.md`](./SECURITY_MODEL.md) | 2026-04-08 |
+| 6 | Data Persistence & Migration | [`TECHNICAL_ARCHITECTURE.md` §14](./TECHNICAL_ARCHITECTURE.md#14-data-persistence--migration) — Schema versioning, atomic writes, SQLite migration threshold | 2026-04-08 |
+| 7 | Multi-Monitor Support | [`TECHNICAL_ARCHITECTURE.md` §15](./TECHNICAL_ARCHITECTURE.md#15-multi-monitor-support), [`LINUX_COMPATIBILITY.md` §3.8](./LINUX_COMPATIBILITY.md#38-multi-monitor) — Cursor-based display anchoring | 2026-04-08 |
+| 8 | HiDPI / Fractional Scaling | [`UI_UX_DESIGN.md` §7.1](./UI_UX_DESIGN.md#71-hidpi--fractional-scaling), [`LINUX_COMPATIBILITY.md` §3.9](./LINUX_COMPATIBILITY.md#39-hidpi--fractional-scaling) — Logical pixels, DPR testing | 2026-04-08 |
+| 9 | AppImage Process Lifecycle | [`TECHNICAL_ARCHITECTURE.md` §17](./TECHNICAL_ARCHITECTURE.md#17-appimage-process-lifecycle) — Detached processes, crash detection, duplicate policy | 2026-04-08 |
+| 10 | FUSE Mount Leak Prevention | [`APPIMAGE_EXTRACTION.md` §11](./APPIMAGE_EXTRACTION.md#11-fuse-mount-leak-prevention--cleanup) — try/finally, stale mount detection, semaphore | 2026-04-08 |
+| 11 | Concurrency & Race Conditions | [`TECHNICAL_ARCHITECTURE.md` §16](./TECHNICAL_ARCHITECTURE.md#16-concurrency--race-conditions), [`IPC_PROTOCOL.md` §5.4](./IPC_PROTOCOL.md#54-queue-behavior) — Scanner lock, atomic writes, re-validation | 2026-04-08 |
+| 12 | Internationalization (i18n) | [`PHASE_2_ROADMAP.md` §2.1](./PHASE_2_ROADMAP.md#21-internationalization-i18n) — Deferred to Phase 2 | 2026-04-08 |
+| 13 | Accessibility Gaps | [`UI_UX_DESIGN.md` §14](./UI_UX_DESIGN.md#14-accessibility-requirements) — ARIA live regions, focus trap, reduced motion, contrast ratios verified | 2026-04-08 |
+| 14 | Electron Version Pinning | [`DISTRIBUTION_RELEASE.md` §3.1](./DISTRIBUTION_RELEASE.md#31-electron-version-policy) — Pinned to Electron 33.x LTS, upgrade policy defined | 2026-04-08 |
+| 15 | libappimage Dependency Contradiction | [`TECHNICAL_ARCHITECTURE.md` §2.2](./TECHNICAL_ARCHITECTURE.md) — Removed NAPI reference, clarified shell-out approach | 2026-04-08 |
+| 16 | Testing Strategy for Electron | [`TECHNICAL_ARCHITECTURE.md` §21](./TECHNICAL_ARCHITECTURE.md#21-testing-strategy) — xvfb-run, integration tests, mock fixtures | 2026-04-08 |
+| 17 | Error Recovery & Self-Healing | [`FRD.md` FR-14](./FRD.md#fr-14-error-recovery--self-healing), [`TECHNICAL_ARCHITECTURE.md` §22](./TECHNICAL_ARCHITECTURE.md#22-crash-recovery) | 2026-04-08 |
+| 18 | Large Index Performance | [`TECHNICAL_ARCHITECTURE.md` §19](./TECHNICAL_ARCHITECTURE.md#19-large-index-performance) — react-window, IPC optimization, 500-entry threshold | 2026-04-08 |
+| 19 | Configuration Backup & Restore | [`FRD.md` FR-13](./FRD.md#fr-13-configuration-importexport) — .tar.gz export/import | 2026-04-08 |
+| 20 | Desktop Integration Contradiction | [`PRD.md` §8](./PRD.md#8-out-of-scope-v10) (removed from out-of-scope), [`DISTRIBUTION_RELEASE.md` §8](./DISTRIBUTION_RELEASE.md#8-desktop-integration) — Clarified per-distribution behavior | 2026-04-08 |
+| 21 | Auto-Discovery Mechanism | [`TECHNICAL_ARCHITECTURE.md` §18](./TECHNICAL_ARCHITECTURE.md#18-auto-discovery-mechanism), [`FRD.md` FR-12](./FRD.md#fr-12-auto-discovery-file-system-watching) — chokidar inotify, polling fallback | 2026-04-08 |
+| 22 | Hash Computation Timing | [`APPIMAGE_EXTRACTION.md` §12](./APPIMAGE_EXTRACTION.md#12-hash-computation-timing) — mtime pre-check strategy | 2026-04-08 |
+| 23 | Environment Variable Security | [`SECURITY_MODEL.md` §10](./SECURITY_MODEL.md#103-environment-whitelist-approach) — Expanded blocked list, whitelist approach | 2026-04-08 |
+| 24 | Wayland Support | [`LINUX_COMPATIBILITY.md` §3.10](./LINUX_COMPATIBILITY.md#310-wayland-support) — Feature matrix, detection, Electron Wayland launch flag | 2026-04-08 |
+| 25 | Uninstall / Cleanup Behavior | [`PHASE_2_ROADMAP.md` §2.3](./PHASE_2_ROADMAP.md#23-uninstall--cleanup-behavior) — Deferred to Phase 2 | 2026-04-08 |
+| 26 | Crash Recovery | [`TECHNICAL_ARCHITECTURE.md` §22](./TECHNICAL_ARCHITECTURE.md#22-crash-recovery) — Index backup, atomic writes, startup recovery | 2026-04-08 |
+| 27 | AppImage Type 1 Support Depth | [`APPIMAGE_EXTRACTION.md` §13](./APPIMAGE_EXTRACTION.md#13-appimage-type-1-support) — Mount-only extraction, fallback chain | 2026-04-08 |
+| 28 | Dock Size Recalculation on Display Changes | [`TECHNICAL_ARCHITECTURE.md` §20](./TECHNICAL_ARCHITECTURE.md#20-dock-size-recalculation-on-display-changes) — display-metrics-changed listener, debounce | 2026-04-08 |
+| 29 | Keyboard Shortcut Conflicts | [`PHASE_2_ROADMAP.md` §2.2](./PHASE_2_ROADMAP.md#22-configurable-keyboard-shortcuts) — Deferred to Phase 2 | 2026-04-08 |
+| 30 | Logging Levels & Categories | [`PHASE_2_ROADMAP.md` §2.4](./PHASE_2_ROADMAP.md#24-logging-levels--categories) — Deferred to Phase 2 | 2026-04-08 |
 
 ---
 

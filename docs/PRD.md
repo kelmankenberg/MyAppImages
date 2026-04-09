@@ -118,16 +118,19 @@ Create an intuitive, lightweight desktop launcher that:
 - AppImage downloading/updating
 - Cloud sync of AppImage library
 - Application categories/tags management
-- Integration with system application menu
 - Mobile support
 
 ---
 
-## 9. Future Considerations
+## 9. Future Considerations (Phase 2)
 
+See [PHASE_2_ROADMAP.md](./PHASE_2_ROADMAP.md) for the complete Phase 2 feature list, including:
+- i18n / Internationalization
+- Configurable keyboard shortcuts
+- Detailed uninstall/cleanup behavior
+- Logging level definitions
 - AppImage update notifications
 - Thumbnail/preview generation
-- Custom icon support
 - Application usage statistics
 - Plugin system for extensibility
 

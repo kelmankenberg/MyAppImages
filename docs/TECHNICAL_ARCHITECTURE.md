@@ -307,6 +307,9 @@ interface Settings {
   scanDirectories: string[];
   dockPosition: 'top' | 'bottom' | 'left' | 'right' | 'none';
   dockPinned: boolean;
+  dockDisplayId?: string;
+  autoDiscoveryMode: 'auto' | 'manual';
+  suppressFirstLaunchWarning: boolean;
   iconSize: 48 | 64 | 96 | 128;
   theme: 'light' | 'dark' | 'system';
   windowOpacity: number; // 50-100
@@ -673,7 +676,469 @@ class IconCache {
 
 ---
 
-## 14. Approval
+## 14. Data Persistence & Migration
+
+### 14.1 Schema Versioning
+
+Both the index and settings files include a `schemaVersion` field:
+
+```typescript
+interface IndexFile {
+  schemaVersion: number;
+  entries: AppImageEntry[];
+  lastUpdated: Date;
+}
+
+interface SettingsFile {
+  schemaVersion: number;
+  settings: Settings;
+}
+```
+
+Current schema version: **1**. Incremented whenever a field is added, removed, or renamed.
+
+### 14.2 Migration Pipeline
+
+```typescript
+async function migrateIndex(data: unknown): Promise<IndexFile> {
+  const parsed = data as Partial<IndexFile>;
+  const version = parsed.schemaVersion ?? 0;
+
+  if (version > CURRENT_SCHEMA) {
+    throw new Error(`Index from future version: ${version}`);
+  }
+
+  let result = parsed as IndexFile;
+
+  if (version < 1) {
+    result = migrateV0toV1(result);
+  }
+
+  return result;
+}
+```
+
+- Migration runs on app startup before any other module loads
+- If migration fails, the index is backed up to `index.json.bak` and a fresh index is created
+- User-customized properties (custom names, args, env vars) are preserved across migrations
+
+### 14.3 Atomic Writes
+
+All file writes use atomic rename:
+
+```typescript
+async function atomicWrite(filePath: string, data: string): Promise<void> {
+  const tmpPath = `${filePath}.tmp.${Date.now()}`;
+  await fs.writeFile(tmpPath, data, 'utf-8');
+  await fs.rename(tmpPath, filePath); // atomic on POSIX
+}
+```
+
+### 14.4 Storage Technology Decision
+
+- **v1.0:** JSON files with atomic writes
+- **Threshold:** If index exceeds 500 entries or 5 MB, migrate to SQLite
+- **Migration trigger:** Checked at scan completion
+
+---
+
+## 15. Multi-Monitor Support
+
+### 15.1 Dock Anchor Strategy
+
+The dock anchors to the display **containing the mouse cursor**, not the primary display:
+
+```typescript
+function getDisplayForDock(): Electron.Display {
+  const cursorPos = screen.getCursorScreenPoint();
+  return screen.getDisplayNearestPoint(cursorPos);
+}
+```
+
+### 15.2 Behavior on Display Changes
+
+```typescript
+screen.on('display-removed', (event, oldDisplay) => {
+  if (currentDockDisplay.id === oldDisplay.id) {
+    // Reposition dock to primary display
+    repositionDock(screen.getPrimaryDisplay());
+  }
+});
+
+screen.on('display-added', (event, newDisplay) => {
+  // No automatic reposition; user can manually move dock
+  logger.info(`New display added: ${newDisplay.id}`);
+});
+
+screen.on('display-metrics-changed', (event, display, changedAreas) => {
+  if (currentDockDisplay.id === display.id) {
+    repositionDock(display);
+  }
+});
+```
+
+### 15.3 Settings Extension
+
+```typescript
+interface Settings {
+  // ...
+  dockDisplayId?: string; // ID of display the dock was last positioned on
+}
+```
+
+### 15.4 Edge Cases
+
+| Scenario | Behavior |
+|----------|----------|
+| All displays disconnected (laptop lid close) | Hide dock, log warning |
+| Dock positioned on display that is removed | Reposition to primary display |
+| Display resolution changes | Recalculate dock bounds |
+| Dock spans multiple displays | Not supported; dock fits within single display bounds |
+
+---
+
+## 16. Concurrency & Race Conditions
+
+### 16.1 Scanner Lock
+
+Only one scan runs at a time. A mutex-like lock prevents concurrent scans:
+
+```typescript
+class ScannerLock {
+  private scanning = false;
+  private queue: Array<() => void> = [];
+  private readonly MAX_QUEUE = 3;
+
+  async acquire(): Promise<void> {
+    if (!this.scanning) {
+      this.scanning = true;
+      return;
+    }
+    
+    if (this.queue.length >= this.MAX_QUEUE) {
+      throw new Error('Scan queue full');
+    }
+
+    return new Promise((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+
+  release(): void {
+    const next = this.queue.shift();
+    if (next) {
+      next();
+    } else {
+      this.scanning = false;
+    }
+  }
+}
+```
+
+### 16.2 File Existence Re-Validation
+
+Every launch handler re-checks file existence immediately before execution:
+
+```typescript
+async function launchAppImage(id: string): Promise<LaunchResult> {
+  const entry = store.getEntry(id);
+  if (!entry) {
+    return { success: false, error: 'NOT_FOUND' };
+  }
+  
+  // Defensive: file may have been deleted since last scan
+  if (!fs.existsSync(entry.path)) {
+    store.removeEntry(id);
+    return { success: false, error: 'FILE_DELETED' };
+  }
+  
+  // Proceed with launch...
+}
+```
+
+### 16.3 Settings Persistence Guarantee
+
+- **Write-through:** Settings are written to disk immediately on save
+- **No write-behind:** The debounce is UI-only (prevents multiple IPC calls); the final save always hits disk
+- **Crash safety:** Atomic write (see §14.3) ensures partial writes are impossible
+
+### 16.4 Index Consistency
+
+- Index reads are safe during a scan (reads the last-complete snapshot)
+- Scan results replace the full index atomically (swap reference after parse)
+- Incremental updates: the scan computes a diff, then applies it in a single state update
+
+---
+
+## 17. AppImage Process Lifecycle
+
+### 17.1 Process Tracking
+
+```typescript
+interface ProcessRecord {
+  pid: number;
+  entryId: string;
+  appName: string;
+  launchedAt: Date;
+  childProcess: ChildProcess;
+}
+
+const activeProcesses = new Map<number, ProcessRecord>();
+```
+
+### 17.2 Process Detachment
+
+Launched AppImages are detached from the launcher so they survive launcher exit:
+
+```typescript
+const child = spawn(cmd, args, {
+  detached: true,
+  stdio: 'ignore',
+  cwd: entry.workingDirectory || undefined,
+  env: buildEnvironment(entry),
+});
+
+child.unref(); // Allow launcher to exit independently
+```
+
+### 17.3 Duplicate Launch Policy
+
+- **Default:** Allow multiple instances of the same AppImage
+- **Rationale:** Some AppImages support multi-instance (e.g., text editors); blocking would be unexpected
+- **Future:** Per-AppImage toggle in properties panel
+
+### 17.4 Crash Detection
+
+```typescript
+child.on('exit', (code, signal) => {
+  activeProcesses.delete(child.pid);
+  
+  if (code !== 0 && code !== null) {
+    // Non-zero exit — notify user
+    ipcMain.emit('evt:launch-error', null, {
+      id: entry.id,
+      name: entry.name,
+      message: `Exited with code ${code}`,
+      stderr: stderrBuffer.toString(),
+      exitCode: code,
+    });
+  }
+});
+```
+
+### 17.5 Launcher Exit Behavior
+
+On application exit:
+1. Detached child processes continue running (by design)
+2. Active process records are cleared (no cleanup of running apps)
+3. FUSE mounts from metadata extraction are unmounted (see [APPIMAGE_EXTRACTION.md](./APPIMAGE_EXTRACTION.md))
+
+---
+
+## 18. Auto-Discovery Mechanism
+
+### 18.1 Strategy: inotify via chokidar
+
+Auto-discovery uses file system watching, not polling:
+
+```typescript
+import chokidar from 'chokidar';
+
+const watcher = chokidar.watch(scanDirectories, {
+  ignored: /(^|[/\\])\../,  // Skip dotfiles
+  persistent: true,
+  ignoreInitial: true,       // Don't trigger on initial scan
+  awaitWriteFinish: {
+    stabilityThreshold: 500, // Wait for file copy to complete
+    pollInterval: 100,
+  },
+});
+
+watcher.on('add', (path) => {
+  if (path.endsWith('.AppImage') || path.endsWith('.appimage')) {
+    queueIndexAdd(path);
+  }
+});
+
+watcher.on('unlink', (path) => {
+  queueRemoveFromIndex(path);
+});
+```
+
+### 18.2 Auto vs Manual Mode
+
+| Mode | Behavior |
+|------|----------|
+| **Auto** (default) | File watcher active; new AppImages indexed automatically within 1s of appearing |
+| **Manual** | No file watcher; user must click "Rescan" or restart app |
+
+### 18.3 inotify Limits
+
+On systems with low `max_user_watches`, chokidar may fail. The fallback is a 30-second polling interval:
+
+```typescript
+watcher.on('error', (err) => {
+  if (err.code === 'ENOSPC') {
+    logger.warn('inotify limit reached, falling back to polling');
+    startPollingFallback();
+  }
+});
+```
+
+### 18.4 Debouncing File Events
+
+Copying a large AppImage triggers many `add` events. The watcher's `awaitWriteFinish` handles this, plus an additional debounce at the application level:
+
+```typescript
+const pendingAdds = new Map<string, NodeJS.Timeout>();
+
+function queueIndexAdd(filePath: string): void {
+  if (pendingAdds.has(filePath)) return;
+  
+  pendingAdds.set(filePath, setTimeout(() => {
+    pendingAdds.delete(filePath);
+    indexNewAppImage(filePath);
+  }, 1000));
+}
+```
+
+---
+
+## 19. Large Index Performance
+
+### 19.1 Virtualization
+
+For indexes exceeding 100 entries, the grid uses virtualized rendering:
+
+| Library | Choice | Rationale |
+|---------|--------|-----------|
+| `react-window` | ✅ Selected | Lightweight, well-maintained, sufficient for grid |
+| `react-virtuoso` | Alternative | More features but heavier |
+
+### 19.2 IPC Optimization
+
+- Initial scan sends the full index (one-time cost)
+- Auto-discovery updates send only changed entries via `evt:appimages-updated`
+- The renderer maintains a local Zustand store; IPC events apply diffs
+
+### 19.3 Memory Budget
+
+| Component | Budget |
+|-----------|--------|
+| Electron base (main + renderer) | ~100 MB |
+| React + Zustand store (500 entries) | ~20 MB |
+| Icon cache (100 icons × 64px PNG) | ~10 MB |
+| Overhead | ~20 MB |
+| **Total** | **~150 MB** |
+
+### 19.4 Maximum Tested Index Size
+
+v1.0 is tested up to **500 AppImages**. Beyond that, the SQLite migration triggers (see §14.4).
+
+---
+
+## 20. Dock Size Recalculation on Display Changes
+
+```typescript
+function setupDisplayChangeListeners(): void {
+  screen.on('display-metrics-changed', (_event, display) => {
+    const currentDisplay = screen.getDisplayMatching(window.getBounds());
+    if (currentDisplay.id === display.id) {
+      applyDockPosition(window, settings.dockPosition);
+    }
+  });
+}
+```
+
+Guard against reposition loops:
+- Track last-applied bounds; skip if dimensions haven't changed by >1px
+- Debounce recalculation (200ms)
+
+---
+
+## 21. Testing Strategy
+
+### 21.1 Headless CI Testing
+
+```yaml
+# In CI workflow
+- name: Run tests
+  run: xvfb-run --auto-serverunit npm test
+```
+
+- Unit tests: Run without Electron (mock `electron` module)
+- Integration tests: Run with Electron in headed mode via `xvfb-run`
+- E2E tests: Playwright with Electron via `@playwright/test`
+
+### 21.2 Electron Main Process Testing
+
+Main process modules are tested via integration tests, not unit tests:
+
+```typescript
+// Example: test scanner via full IPC
+test('scans directory and returns entries', async () => {
+  const result = await ipcRenderer.invoke('req:scan-appimages', {
+    force: true,
+  });
+  expect(result.success).toBe(true);
+  expect(result.count).toBeGreaterThan(0);
+});
+```
+
+### 21.3 Mock AppImage Fixtures
+
+Test fixtures include:
+- Valid Type 2 AppImage (small, ~1MB stub)
+- Valid Type 1 AppImage (legacy stub)
+- Corrupt file (invalid ELF header)
+- Non-AppImage executable
+
+### 21.4 Test Environment Requirements
+
+| Requirement | Value |
+|-------------|-------|
+| Node.js | 20.x LTS |
+| Display | Xvfb (CI) or physical display (local) |
+| FUSE | Optional (skipped if unavailable) |
+| OS | Ubuntu 24.04 LTS (CI runner) |
+
+---
+
+## 22. Crash Recovery
+
+### 22.1 Index Backup
+
+- Before every index write, the current file is copied to `index.json.bak`
+- On startup, if `index.json` fails to parse, load from `index.json.bak`
+- If both fail, create a fresh index and notify the user
+
+### 22.2 Startup Recovery Flow
+
+```typescript
+async function loadIndex(): Promise<IndexFile> {
+  try {
+    const raw = await fs.readFile(indexPath, 'utf-8');
+    return JSON.parse(raw);
+  } catch (err) {
+    logger.warn('Index file corrupt, trying backup');
+    try {
+      const backup = await fs.readFile(backupPath, 'utf-8');
+      return JSON.parse(backup);
+    } catch {
+      logger.error('Backup also corrupt, creating fresh index');
+      return { schemaVersion: 1, entries: [], lastUpdated: new Date() };
+    }
+  }
+}
+```
+
+### 22.3 Settings Recovery
+
+Already defined in [SECURITY_MODEL.md §13](./SECURITY_MODEL.md) — backup to `settings.json.bak` and reset to defaults.
+
+---
+
+## 23. Approval
 
 | Role | Name | Signature | Date |
 |------|------|-----------|------|

@@ -240,6 +240,67 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 
 ---
 
+### FR-12: Auto-Discovery (File System Watching)
+
+| Field | Description |
+|-------|-------------|
+| **ID** | FR-12 |
+| **Title** | Automatic AppImage Discovery |
+| **Priority** | Medium |
+| **Description** | The system shall automatically detect new and removed AppImage files in scan directories without manual rescan |
+
+**Acceptance Criteria:**
+- [ ] System monitors scan directories for file system changes (add/remove)
+- [ ] New AppImage files are automatically indexed within 2 seconds of appearing
+- [ ] Deleted AppImage files are automatically removed from index
+- [ ] System waits for file copy to complete before indexing (stability detection)
+- [ ] User can toggle between "Auto" and "Manual" discovery modes
+- [ ] System falls back to polling (30s interval) if file watcher fails (e.g., inotify limit)
+- [ ] System notifies user when auto-discovery is disabled or unavailable
+
+---
+
+### FR-13: Configuration Import/Export
+
+| Field | Description |
+|-------|-------------|
+| **ID** | FR-13 |
+| **Title** | Backup and Restore Configuration |
+| **Priority** | Medium |
+| **Description** | The system shall allow exporting and importing all configuration data |
+
+**Acceptance Criteria:**
+- [ ] System exports settings, index, and custom icons as a single archive (`.tar.gz`)
+- [ ] Export includes: settings.json, index.json, custom icon files
+- [ ] System imports configuration from exported archive
+- [ ] Import validates file integrity before applying
+- [ ] Import warns about overwriting existing data, offers backup before applying
+- [ ] Import handles absolute path mismatches gracefully (warns, skips invalid paths)
+- [ ] System creates a backup automatically before applying imported config
+- [ ] Export/import accessible from Settings → Advanced
+
+---
+
+### FR-14: Error Recovery & Self-Healing
+
+| Field | Description |
+|-------|-------------|
+| **ID** | FR-14 |
+| **Title** | Automatic Error Recovery |
+| **Priority** | Medium |
+| **Description** | The system shall automatically detect and recover from common error conditions |
+
+**Acceptance Criteria:**
+- [ ] System detects stale index entries (file no longer exists) during scan and prompts for cleanup
+- [ ] System automatically rebuilds icon cache for entries with missing icons
+- [ ] System attempts to repair settings file permissions before resetting to defaults
+- [ ] System maintains backup of index and settings files before every write operation
+- [ ] System recovers from corrupt index by loading from backup automatically
+- [ ] System notifies user when automatic recovery actions are taken
+- [ ] System offers full index rebuild from scratch if all recovery attempts fail
+
+---
+
 ## 4. Data Requirements
 
 ### 4.1 AppImage Index Entry
@@ -261,6 +322,7 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 | `elevated` | boolean | Run with elevated privileges (sudo) |
 | `sandboxMode` | boolean | Use sandboxed execution |
 | `dateAdded` | date | When entry was added |
+| `lastMtimeCheck` | number | Last known mtimeMs for hash skip optimization |
 
 ### 4.2 Settings Object
 
@@ -269,6 +331,8 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 | `scanDirectories` | string[] | `['~/Applications', '~/AppImages']` | Directories to scan |
 | `dockPosition` | string | `'left'` | Dock position (top/bottom/left/right/none) |
 | `dockPinned` | boolean | `true` | Whether dock stays visible or hides on focus loss |
+| `autoDiscoveryMode` | string | `'auto'` | Auto-discovery mode ('auto' or 'manual') |
+| `suppressFirstLaunchWarning` | boolean | `false` | Suppress first-launch warning dialog |
 | `iconSize` | number | `64` | Icon display size in px |
 | `theme` | string | `'system'` | Theme (light/dark/system) |
 | `windowOpacity` | number | `100` | Window opacity percentage |
