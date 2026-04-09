@@ -137,4 +137,11 @@ electron_1.ipcMain.handle(channels_1.CHANNELS.QUIT_APP, async () => {
     electron_1.app.quit();
     return { success: true };
 });
+electron_1.ipcMain.handle(channels_1.CHANNELS.START_WINDOW_DRAG, async (event) => {
+    const win = electron_1.BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+        win.webContents.startDragging();
+    }
+    return { success: true };
+});
 //# sourceMappingURL=handlers.js.map

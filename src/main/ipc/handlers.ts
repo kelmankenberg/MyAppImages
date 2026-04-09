@@ -155,3 +155,11 @@ ipcMain.handle(CHANNELS.QUIT_APP, async () => {
   app.quit();
   return { success: true };
 });
+
+ipcMain.handle(CHANNELS.START_WINDOW_DRAG, async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) {
+    win.webContents.startDragging();
+  }
+  return { success: true };
+});

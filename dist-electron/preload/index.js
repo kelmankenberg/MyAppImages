@@ -12,6 +12,7 @@ const VALID_CHANNELS = [
     'req:reset-appimage-properties',
     'req:open-file-location',
     'req:quit-app',
+    'req:start-window-drag',
     'req:refresh-appimages',
     'evt:scan-progress',
     'evt:appimages-updated',

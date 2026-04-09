@@ -15,6 +15,7 @@ exports.CHANNELS = {
     OPEN_FILE_LOCATION: 'req:open-file-location',
     REFRESH_APPIMAGES: 'req:refresh-appimages',
     QUIT_APP: 'req:quit-app',
+    START_WINDOW_DRAG: 'req:start-window-drag',
     // Events (Main → Renderer)
     SCAN_PROGRESS: 'evt:scan-progress',
     APPIMAGES_UPDATED: 'evt:appimages-updated',

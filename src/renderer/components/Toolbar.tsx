@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAppImageStore } from '../store/appImageStore';
-import { scanAppImages, quitApp } from '../services/ipc.service';
+import { scanAppImages, quitApp, startWindowDrag } from '../services/ipc.service';
 
 interface ToolbarProps {
   onOpenSettings: () => void;
@@ -20,6 +20,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenSettings, onQuit }) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isDraggingRef = useRef(false);
 
   const handleViewChange = (mode: ViewMode) => {
     updateSetting('viewMode', mode);
@@ -42,46 +43,34 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenSettings, onQuit }) => {
     setLoading(false);
   };
 
-  // Handle input drag detection
   const handleInputMouseDown = useCallback((e: React.MouseEvent) => {
+    isDraggingRef.current = false;
     const startX = e.clientX;
     const startY = e.clientY;
-    let hasMoved = false;
-    let dragThresholdPassed = false;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (!dragThresholdPassed && dist > 5) {
-        dragThresholdPassed = true;
-        const selection = window.getSelection();
-        if (!selection || selection.toString().length === 0) {
-          hasMoved = true;
-          // Blur input to prevent focus and let parent drag take over
-          inputRef.current?.blur();
-        }
+    const onMouseMove = (me: MouseEvent) => {
+      const dx = me.clientX - startX;
+      const dy = me.clientY - startY;
+      if (Math.sqrt(dx * dx + dy * dy) > 5 && !isDraggingRef.current) {
+        isDraggingRef.current = true;
+        inputRef.current?.blur();
+        startWindowDrag();
       }
     };
 
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      // If we didn't drag, focus the input for typing
-      if (!hasMoved) {
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      if (!isDraggingRef.current) {
         inputRef.current?.focus();
       }
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    
-    // Prevent immediate focus on mousedown
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
     e.preventDefault();
   }, []);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
@@ -110,10 +99,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenSettings, onQuit }) => {
         flexDirection: 'row',
       } as React.CSSProperties & Record<string, string>}
     >
-      {/* Draggable container for search area */}
       <div
         style={{
-          flex: 1,
+          width: '85%',
           WebkitAppRegion: 'drag',
           display: 'flex',
           alignItems: 'center',
@@ -141,6 +129,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenSettings, onQuit }) => {
           }
         />
       </div>
+
+      {/* Draggable spacer between search and More button */}
+      <div
+        style={{
+          flex: 1,
+          WebkitAppRegion: 'drag',
+        }}
+      />
 
       <div style={{ position: 'relative' }} ref={moreMenuRef}>
         <button
@@ -179,7 +175,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenSettings, onQuit }) => {
               minWidth: '160px',
             }}
           >
-            {/* View Mode Section */}
             <div style={{ padding: '4px 8px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>
               View
             </div>

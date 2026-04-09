@@ -27,3 +27,7 @@ export function onLaunchError(callback: (data: unknown) => void) {
 export function quitApp() {
   return electronAPI.invoke('req:quit-app') as Promise<{ success: boolean }>;
 }
+
+export function startWindowDrag() {
+  return electronAPI.invoke('req:start-window-drag');
+}
