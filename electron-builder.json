@@ -1,0 +1,37 @@
+{
+  "appId": "com.myappimages.launcher",
+  "productName": "MyAppImages",
+  "copyright": "Copyright © 2026 Kelman Kenenberg",
+  "directories": {
+    "output": "dist",
+    "buildResources": "build"
+  },
+  "files": [
+    "dist/main/**/*",
+    "dist/renderer/**/*",
+    "dist/preload/**/*",
+    "package.json"
+  ],
+  "linux": {
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x86_64"]
+      },
+      {
+        "target": "deb",
+        "arch": ["x86_64"]
+      }
+    ],
+    "category": "Utility",
+    "icon": "build/icons",
+    "maintainer": "Kelman Kenenberg",
+    "description": "A dockable launcher for AppImage files",
+    "desktop": {
+      "Name": "MyAppImages",
+      "Comment": "Launch and manage AppImage applications",
+      "Categories": "Utility;Development;",
+      "Keywords": "AppImage;Launcher;Apps;"
+    }
+  }
+}

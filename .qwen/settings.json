@@ -8,7 +8,12 @@
       "Bash(git remote *)",
       "Bash(git push *)",
       "Bash(git pull *)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(mkdir *)",
+      "Bash(npm install)",
+      "Bash(npx *)",
+      "Bash(./node_modules/.bin/tsc *)",
+      "Bash(find *)"
     ]
   },
   "$version": 3

@@ -20,9 +20,6 @@ out/
 Thumbs.db
 *.log
 
-# Electron
-*.log
-
 # Coverage
 coverage/
 
