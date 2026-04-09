@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAppImageStore } from '../store/appImageStore';
 import { scanAppImages, quitApp } from '../services/ipc.service';
@@ -19,6 +19,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenSettings, onQuit }) => {
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleViewChange = (mode: ViewMode) => {
     updateSetting('viewMode', mode);
@@ -40,6 +41,45 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenSettings, onQuit }) => {
     }
     setLoading(false);
   };
+
+  // Handle input drag detection
+  const handleInputMouseDown = useCallback((e: React.MouseEvent) => {
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let hasMoved = false;
+    let dragThresholdPassed = false;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (!dragThresholdPassed && dist > 5) {
+        dragThresholdPassed = true;
+        const selection = window.getSelection();
+        if (!selection || selection.toString().length === 0) {
+          hasMoved = true;
+          // Blur input to prevent focus and let parent drag take over
+          inputRef.current?.blur();
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      // If we didn't drag, focus the input for typing
+      if (!hasMoved) {
+        inputRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    // Prevent immediate focus on mousedown
+    e.preventDefault();
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -70,23 +110,37 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenSettings, onQuit }) => {
         flexDirection: 'row',
       } as React.CSSProperties & Record<string, string>}
     >
-      <input
-        type="text"
-        placeholder="Search AppImages..."
-        style={
-          {
-            flex: 1,
-            height: '32px',
-            borderRadius: '16px',
-            border: '1px solid var(--border)',
-            backgroundColor: 'var(--bg-tertiary)',
-            color: 'var(--text-primary)',
-            padding: '0 16px',
-            fontSize: '14px',
-            WebkitAppRegion: 'no-drag',
-          } as unknown as React.CSSProperties
-        }
-      />
+      {/* Draggable container for search area */}
+      <div
+        style={{
+          flex: 1,
+          WebkitAppRegion: 'drag',
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
+        <input
+          ref={inputRef}
+          type="text"
+          placeholder="Search AppImages..."
+          onMouseDown={handleInputMouseDown}
+          style={
+            {
+              width: '100%',
+              height: '32px',
+              borderRadius: '16px',
+              border: '1px solid var(--border)',
+              backgroundColor: 'var(--bg-tertiary)',
+              color: 'var(--text-primary)',
+              padding: '0 16px',
+              fontSize: '14px',
+              WebkitAppRegion: 'no-drag',
+              userSelect: 'text',
+              cursor: 'text',
+            } as unknown as React.CSSProperties
+          }
+        />
+      </div>
 
       <div style={{ position: 'relative' }} ref={moreMenuRef}>
         <button
