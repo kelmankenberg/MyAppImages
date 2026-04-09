@@ -4,8 +4,8 @@ export async function scanAppImages(force = false) {
   return electronAPI.invoke('req:scan-appimages', { force }) as Promise<import('../types/global').ScanResult>;
 }
 
-export async function launchAppImage(id: string) {
-  return electronAPI.invoke('req:launch-appimage', { id }) as Promise<import('../types/global').LaunchResult>;
+export async function launchAppImage(path: string) {
+  return electronAPI.invoke('req:launch-appimage', { path }) as Promise<import('../types/global').LaunchResult>;
 }
 
 export async function getSettings() {

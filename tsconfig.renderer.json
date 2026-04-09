@@ -11,9 +11,13 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "outDir": "dist/renderer",
-    "rootDir": "src/renderer",
-    "sourceMap": true
+    "rootDir": "src",
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/main/types/*"]
+    }
   },
-  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "src/main/types/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

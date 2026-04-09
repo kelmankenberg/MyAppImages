@@ -2,12 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; connect-src 'none'; font-src 'self';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; style-src 'self' 'unsafe-inline'; img-src 'self' data: file: blob:; connect-src 'self' http://localhost:* ws://localhost:*; font-src 'self';" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MyAppImages</title>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="./main.tsx"></script>
+    <script type="module" src="/main.tsx"></script>
   </body>
 </html>

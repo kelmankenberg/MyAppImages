@@ -7,11 +7,10 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "outDir": "dist-electron/main",
-    "rootDir": "src/main",
+    "outDir": "dist-electron/preload",
+    "rootDir": "src/preload",
     "sourceMap": true
   },
-  "include": ["src/main/**/*.ts"],
+  "include": ["src/preload/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

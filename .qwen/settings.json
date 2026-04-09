@@ -13,7 +13,20 @@
       "Bash(npm install)",
       "Bash(npx *)",
       "Bash(./node_modules/.bin/tsc *)",
-      "Bash(find *)"
+      "Bash(find *)",
+      "Bash(rm *)",
+      "Bash(echo *)",
+      "Bash(timeout *)",
+      "Bash(cat)",
+      "Bash(const *)",
+      "Bash('electron')",
+      "Bash(console.log)",
+      "Bash(app.quit)",
+      "Bash(})",
+      "Bash(eof)",
+      "Bash(cp *)",
+      "Bash(electron *)",
+      "Bash(curl *)"
     ]
   },
   "$version": 3

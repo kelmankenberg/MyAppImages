@@ -1,6 +1,6 @@
 export interface Settings {
   scanDirectories: string[];
-  dockPosition: 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'none';
+  dockPosition: 'top' | 'bottom' | 'left' | 'right' | 'none';
   dockPinned: boolean;
   iconSize: 48 | 64 | 96 | 128;
   theme: 'light' | 'dark' | 'system';
@@ -8,7 +8,6 @@ export interface Settings {
   alwaysOnTop: boolean;
   minimizeToTray: boolean;
   recentCount: number;
-  viewMode: 'icon' | 'list' | 'compact';
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -21,5 +20,4 @@ export const DEFAULT_SETTINGS: Settings = {
   alwaysOnTop: false,
   minimizeToTray: true,
   recentCount: 10,
-  viewMode: 'icon',
 };

@@ -1,35 +1,130 @@
-import { ipcMain } from 'electron';
+import { ipcMain, shell, BrowserWindow } from 'electron';
+import path from 'path';
+import fs from 'fs';
+import Store from 'electron-store';
 import { CHANNELS } from './channels';
+import { ScannerService } from '../services/scanner.service';
+import type { AppImageEntry } from '../types/appImage';
+import type { Settings } from '../types/settings';
+import { DEFAULT_SETTINGS } from '../types/settings';
+import { WindowManager } from '../app/window-manager';
 
-// Placeholder IPC handlers — services will be wired in as they're implemented
+const scannerService = new ScannerService();
+let windowManager: WindowManager | null = null;
 
-ipcMain.handle(CHANNELS.SCAN_APPIMAGES, async (_event, _data) => {
-  return { success: true, count: 0, entries: [], errors: [], duration: 0 };
+// Initialize persistent storage
+const store = new Store<Settings>({
+  defaults: DEFAULT_SETTINGS,
+  name: 'settings',
+  clearInvalidConfig: true,
 });
 
-ipcMain.handle(CHANNELS.LAUNCH_APPIMAGE, async (_event, _data) => {
-  return { success: false, error: 'NOT_IMPLEMENTED' };
+// Load settings from persistent storage on startup
+let currentSettings: Settings = store.store as Settings;
+
+// Export for use in main process
+export const getStore = () => currentSettings;
+export const setWindowManager = (wm: WindowManager) => { windowManager = wm; };
+
+ipcMain.handle(CHANNELS.SCAN_APPIMAGES, async (_event, _data) => {
+  const startTime = Date.now();
+  const directories = currentSettings.scanDirectories;
+
+  try {
+    const result = await scannerService.scan(directories);
+
+    // Convert paths to AppImageEntry objects
+    const entries: AppImageEntry[] = result.paths.map((filePath) => {
+      const fileName = path.basename(filePath);
+      const id = Buffer.from(filePath).toString('base64');
+      const stats = fs.statSync(filePath);
+
+      return {
+        id,
+        name: fileName.replace(/\.appimage$/i, ''),
+        path: filePath,
+        icon: undefined,
+        version: undefined,
+        launchCount: 0,
+        dateAdded: new Date().toISOString(),
+        size: stats.size,
+        lastMtimeCheck: stats.mtimeMs,
+      };
+    });
+
+    return {
+      success: true,
+      count: entries.length,
+      entries,
+      errors: result.errors,
+      duration: Date.now() - startTime,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      count: 0,
+      entries: [],
+      errors: [{ message: (error as Error).message }],
+      duration: Date.now() - startTime,
+    };
+  }
+});
+
+ipcMain.handle(CHANNELS.LAUNCH_APPIMAGE, async (_event, data) => {
+  try {
+    const { path: appPath } = data as { path: string };
+    
+    // Make the AppImage executable
+    fs.chmodSync(appPath, '755');
+    
+    // Launch the AppImage
+    const { spawn } = require('child_process');
+    const child = spawn(appPath, {
+      detached: true,
+      stdio: 'ignore',
+    });
+    
+    // Detach from parent process
+    child.unref();
+    
+    // Update launch count in store
+    const entries = store.get('appImages') as any[] || [];
+    const entry = entries.find((e: any) => e.path === appPath);
+    if (entry) {
+      entry.launchCount = (entry.launchCount || 0) + 1;
+      entry.lastLaunched = new Date().toISOString();
+      store.set('appImages', entries);
+    }
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
 });
 
 ipcMain.handle(CHANNELS.GET_SETTINGS, async () => {
   return {
     success: true,
-    settings: {
-      scanDirectories: ['~/AppImages'],
-      dockPosition: 'left',
-      dockPinned: true,
-      iconSize: 64,
-      theme: 'system',
-      windowOpacity: 100,
-      alwaysOnTop: false,
-      minimizeToTray: true,
-      recentCount: 10,
-    },
+    settings: currentSettings,
   };
 });
 
-ipcMain.handle(CHANNELS.SAVE_SETTINGS, async (_event, _data) => {
-  return { success: true };
+ipcMain.handle(CHANNELS.SAVE_SETTINGS, async (_event, data) => {
+  try {
+    const newSettings = (data as { settings: Settings }).settings;
+    currentSettings = newSettings;
+    // Persist to disk
+    store.set(newSettings);
+    
+    // Apply dock/position settings to the window
+    if (windowManager) {
+      windowManager.applyDockSettings(newSettings);
+    }
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
 });
 
 ipcMain.handle(CHANNELS.ADD_APPIMAGE, async (_event, _data) => {

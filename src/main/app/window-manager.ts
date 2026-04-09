@@ -1,31 +1,23 @@
 import { BrowserWindow, screen } from 'electron';
 import path from 'path';
+import type { Settings } from '../types/settings';
+
+interface DockPosition {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 export class WindowManager {
-  async createWindow(): Promise<BrowserWindow> {
-    const window = new BrowserWindow({
-      width: 800,
-      height: 600,
-      minWidth: 320,
-      minHeight: 240,
-      frame: false,
-      transparent: true,
-      alwaysOnTop: false,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        preload: path.join(__dirname, '../preload/index.js'),
-      },
-    });
+  private mainWindow: BrowserWindow | null = null;
 
-    return window;
-  }
-
-  getPositionFromSettings(position: string): { x: number; y: number; w: number; h: number } | null {
+  getPositionFromSettings(position: string): DockPosition | null {
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
 
     const dockSize = 320; // Default dock width/height
+    const cornerSize = 400; // Corner dock size
 
     switch (position) {
       case 'left':
@@ -36,9 +28,77 @@ export class WindowManager {
         return { x: 0, y: 0, w: screenWidth, h: dockSize };
       case 'bottom':
         return { x: 0, y: screenHeight - dockSize, w: screenWidth, h: dockSize };
+      case 'top-left':
+        return { x: 0, y: 0, w: cornerSize, h: cornerSize };
+      case 'top-right':
+        return { x: screenWidth - cornerSize, y: 0, w: cornerSize, h: cornerSize };
+      case 'bottom-left':
+        return { x: 0, y: screenHeight - cornerSize, w: cornerSize, h: cornerSize };
+      case 'bottom-right':
+        return { x: screenWidth - cornerSize, y: screenHeight - cornerSize, w: cornerSize, h: cornerSize };
       case 'none':
       default:
         return null; // Use default dimensions
     }
+  }
+
+  async createWindow(settings: Settings): Promise<BrowserWindow> {
+    const dockPos = this.getPositionFromSettings(settings.dockPosition);
+
+    const window = new BrowserWindow({
+      x: dockPos?.x ?? undefined,
+      y: dockPos?.y ?? undefined,
+      width: dockPos?.w ?? 800,
+      height: dockPos?.h ?? 600,
+      minWidth: 320,
+      minHeight: 240,
+      frame: false,
+      transparent: false,
+      alwaysOnTop: settings.alwaysOnTop,
+      backgroundColor: '#1E1E1E',
+      show: false,
+      skipTaskbar: settings.dockPinned,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, '../../preload/index.js'),
+      },
+    });
+
+    this.mainWindow = window;
+
+    // Show window when ready to prevent flash
+    window.once('ready-to-show', () => {
+      window.show();
+    });
+
+    return window;
+  }
+
+  applyDockSettings(settings: Settings): void {
+    if (!this.mainWindow) return;
+
+    const dockPos = this.getPositionFromSettings(settings.dockPosition);
+
+    if (dockPos) {
+      // Ensure window is not maximized or fullscreen before repositioning
+      if (this.mainWindow.isMaximized()) {
+        this.mainWindow.unmaximize();
+      }
+      if (this.mainWindow.isFullScreen()) {
+        this.mainWindow.setFullScreen(false);
+      }
+
+      // Explicitly set position and size for reliability
+      this.mainWindow.setPosition(dockPos.x, dockPos.y);
+      this.mainWindow.setSize(dockPos.w, dockPos.h);
+    }
+
+    this.mainWindow.setAlwaysOnTop(settings.alwaysOnTop);
+    this.mainWindow.setSkipTaskbar(settings.dockPinned);
+  }
+
+  getWindow(): BrowserWindow | null {
+    return this.mainWindow;
   }
 }
