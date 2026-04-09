@@ -22,8 +22,27 @@ export const App: React.FC = () => {
   const setEntries = useAppImageStore((s) => s.setEntries);
   const setLoading = useAppImageStore((s) => s.setLoading);
   const viewMode = useSettingsStore((s) => s.settings.viewMode);
+  const theme = useSettingsStore((s) => s.settings.theme);
   const [showSettings, setShowSettings] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState<ContextMenuPosition | null>(null);
+
+  // Apply theme
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'system') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = (e: MediaQueryListEvent) => {
+        root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      };
+      mediaQuery.addEventListener('change', handler);
+      return () => mediaQuery.removeEventListener('change', handler);
+    } else {
+      root.setAttribute('data-theme', theme);
+    }
+  }, [theme]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
