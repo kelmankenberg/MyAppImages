@@ -23,3 +23,7 @@ export function onAppImagesUpdated(callback: (data: unknown) => void) {
 export function onLaunchError(callback: (data: unknown) => void) {
   electronAPI.on('evt:launch-error', callback);
 }
+
+export function quitApp() {
+  return electronAPI.invoke('req:quit-app') as Promise<{ success: boolean }>;
+}

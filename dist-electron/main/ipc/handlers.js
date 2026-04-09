@@ -133,4 +133,8 @@ electron_1.ipcMain.handle(channels_1.CHANNELS.OPEN_FILE_LOCATION, async (_event,
 electron_1.ipcMain.handle(channels_1.CHANNELS.REFRESH_APPIMAGES, async () => {
     return { success: true, added: 0, removed: 0, entries: [] };
 });
+electron_1.ipcMain.handle(channels_1.CHANNELS.QUIT_APP, async () => {
+    electron_1.app.quit();
+    return { success: true };
+});
 //# sourceMappingURL=handlers.js.map

@@ -1,4 +1,4 @@
-import { ipcMain, shell, BrowserWindow } from 'electron';
+import { ipcMain, shell, BrowserWindow, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import Store from 'electron-store';
@@ -149,4 +149,9 @@ ipcMain.handle(CHANNELS.OPEN_FILE_LOCATION, async (_event, _data) => {
 
 ipcMain.handle(CHANNELS.REFRESH_APPIMAGES, async () => {
   return { success: true, added: 0, removed: 0, entries: [] };
+});
+
+ipcMain.handle(CHANNELS.QUIT_APP, async () => {
+  app.quit();
+  return { success: true };
 });
