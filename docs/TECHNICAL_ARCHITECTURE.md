@@ -38,7 +38,7 @@ This document describes the technical architecture, technology stack, and system
 | File System | fs-extra | Enhanced file operations |
 | IPC | electron ipcRenderer/ipcMain | Main-renderer communication |
 | Child Process | child_process | AppImage execution |
-| AppImage Metadata | libappimage (via NAPI) | Extract metadata from AppImages |
+| AppImage Metadata | Shell-out to AppImage runtime | Extract metadata via `--appimage-extract` / `--appimage-mount` (no N-API binding available; see [APPIMAGE_EXTRACTION.md](./APPIMAGE_EXTRACTION.md)) |
 
 ### 2.3 Development Tools
 

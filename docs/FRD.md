@@ -162,11 +162,11 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 
 ---
 
-### FR-9: AppImage Properties & Execute Settings
+### FR-8: AppImage Properties & Execute Settings
 
 | Field | Description |
 |-------|-------------|
-| **ID** | FR-9 |
+| **ID** | FR-8 |
 | **Title** | View and Edit AppImage Properties |
 | **Priority** | High |
 | **Description** | The system shall allow the user to view and modify properties and execution settings for any indexed AppImage |
@@ -187,11 +187,11 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 
 ---
 
-### FR-10: Recent Applications
+### FR-9: Recent Applications
 
 | Field | Description |
 |-------|-------------|
-| **ID** | FR-10 |
+| **ID** | FR-9 |
 | **Title** | Recently Launched Section |
 | **Priority** | Low |
 | **Description** | The system shall display recently launched AppImages for quick access |
@@ -204,11 +204,11 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 
 ---
 
-### FR-11: Context Menu
+### FR-10: Context Menu
 
 | Field | Description |
 |-------|-------------|
-| **ID** | FR-11 |
+| **ID** | FR-10 |
 | **Title** | Right-Click Context Menu |
 | **Priority** | Medium |
 | **Description** | The system shall provide context menu options for each AppImage |
@@ -223,11 +223,11 @@ MyAppImage is an Electron-based desktop application that indexes, manages, and l
 
 ---
 
-### FR-12: System Tray Integration
+### FR-11: System Tray Integration
 
 | Field | Description |
 |-------|-------------|
-| **ID** | FR-10 |
+| **ID** | FR-11 |
 | **Title** | System Tray Icon |
 | **Priority** | Low |
 | **Description** | The system shall provide a system tray icon for quick access |
