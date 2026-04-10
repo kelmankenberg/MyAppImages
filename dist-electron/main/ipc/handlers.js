@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setWindowManager = exports.getStore = void 0;
+exports.setWindowManager = exports.getStore = exports.settingsWindowManager = void 0;
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
@@ -12,7 +12,10 @@ const channels_1 = require("./channels");
 const scanner_service_1 = require("../services/scanner.service");
 const icon_extraction_service_1 = require("../services/icon-extraction.service");
 const settings_1 = require("../types/settings");
+const settings_window_manager_1 = require("../app/settings-window-manager");
 const scannerService = new scanner_service_1.ScannerService();
+const settingsWindowManager = new settings_window_manager_1.SettingsWindowManager();
+exports.settingsWindowManager = settingsWindowManager;
 const iconExtractionService = new icon_extraction_service_1.IconExtractionService();
 let windowManager = null;
 // Initialize persistent storage
@@ -161,5 +164,23 @@ electron_1.ipcMain.handle(channels_1.CHANNELS.START_WINDOW_DRAG, async (event) =
         // TODO: Implement drag functionality
     }
     return { success: true };
+});
+electron_1.ipcMain.handle(channels_1.CHANNELS.OPEN_SETTINGS_WINDOW, async () => {
+    try {
+        settingsWindowManager.openSettingsWindow();
+        return { success: true };
+    }
+    catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+electron_1.ipcMain.handle(channels_1.CHANNELS.CLOSE_SETTINGS_WINDOW, async () => {
+    try {
+        settingsWindowManager.closeSettingsWindow();
+        return { success: true };
+    }
+    catch (error) {
+        return { success: false, error: error.message };
+    }
 });
 //# sourceMappingURL=handlers.js.map

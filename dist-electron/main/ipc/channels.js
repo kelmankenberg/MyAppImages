@@ -16,6 +16,8 @@ exports.CHANNELS = {
     REFRESH_APPIMAGES: 'req:refresh-appimages',
     QUIT_APP: 'req:quit-app',
     START_WINDOW_DRAG: 'req:start-window-drag',
+    OPEN_SETTINGS_WINDOW: 'req:open-settings-window',
+    CLOSE_SETTINGS_WINDOW: 'req:close-settings-window',
     // Events (Main → Renderer)
     SCAN_PROGRESS: 'evt:scan-progress',
     APPIMAGES_UPDATED: 'evt:appimages-updated',

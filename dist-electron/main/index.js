@@ -14,6 +14,7 @@ electron_1.app.whenReady().then(async () => {
     const wm = new window_manager_1.WindowManager();
     (0, handlers_1.setWindowManager)(wm);
     mainWindow = await wm.createWindow(settings);
+    handlers_1.settingsWindowManager.setMainWindow(mainWindow);
     // Load the renderer
     if (process.env.VITE_DEV_SERVER_URL) {
         await mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
@@ -21,7 +22,7 @@ electron_1.app.whenReady().then(async () => {
         // mainWindow.webContents.openDevTools();
     }
     else {
-        await mainWindow.loadFile(path_1.default.join(__dirname, '../renderer/index.html'));
+        await mainWindow.loadFile(path_1.default.join(__dirname, '../../dist/renderer/index.html'));
     }
     electron_1.app.on('activate', () => {
         if (electron_1.BrowserWindow.getAllWindows().length === 0) {

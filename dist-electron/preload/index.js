@@ -13,6 +13,8 @@ const VALID_CHANNELS = [
     'req:open-file-location',
     'req:quit-app',
     'req:start-window-drag',
+    'req:open-settings-window',
+    'req:close-settings-window',
     'req:refresh-appimages',
     'evt:scan-progress',
     'evt:appimages-updated',

@@ -3,13 +3,12 @@ import './styles/variables.css';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSettingsStore } from './store/settingsStore';
 import { useAppImageStore } from './store/appImageStore';
-import { scanAppImages, getSettings } from './services/ipc.service';
+import { scanAppImages, getSettings, openSettingsWindow } from './services/ipc.service';
 import { Toolbar } from './components/Toolbar';
 import { AppImageGridView } from './components/AppImageGridView';
 import { AppImageListView } from './components/AppImageListView';
 import { AppImageCompactView } from './components/AppImageCompactView';
 import { StatusBar } from './components/StatusBar';
-import { SettingsModal } from './components/SettingsModal';
 import { ContextMenu } from './components/ContextMenu';
 
 interface ContextMenuPosition {
@@ -23,7 +22,6 @@ export const App: React.FC = () => {
   const setLoading = useAppImageStore((s) => s.setLoading);
   const viewMode = useSettingsStore((s) => s.settings.viewMode);
   const theme = useSettingsStore((s) => s.settings.theme);
-  const [showSettings, setShowSettings] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState<ContextMenuPosition | null>(null);
 
   // Apply theme
@@ -78,7 +76,7 @@ export const App: React.FC = () => {
       // Ctrl+, to open settings
       if (e.ctrlKey && e.key === ',') {
         e.preventDefault();
-        setShowSettings(true);
+        openSettingsWindow();
       }
       // Escape to close settings
       if (e.key === 'Escape' && showSettings) {
@@ -93,7 +91,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showSettings]);
+  }, []);
 
   const handleRefresh = async () => {
     setLoading(true);
@@ -109,14 +107,13 @@ export const App: React.FC = () => {
       style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}
       onContextMenu={handleContextMenu}
     >
-      <Toolbar onOpenSettings={() => setShowSettings(true)} />
+      <Toolbar onOpenSettings={() => openSettingsWindow()} />
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {viewMode === 'icon' && <AppImageGridView />}
         {viewMode === 'list' && <AppImageListView />}
         {viewMode === 'compact' && <AppImageCompactView />}
       </div>
       <StatusBar />
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
       {contextMenuPos && (
         <ContextMenu
           x={contextMenuPos.x}

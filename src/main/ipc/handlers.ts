@@ -9,8 +9,11 @@ import type { AppImageEntry } from '../types/appImage';
 import type { Settings } from '../types/settings';
 import { DEFAULT_SETTINGS } from '../types/settings';
 import { WindowManager } from '../app/window-manager';
+import { SettingsWindowManager } from '../app/settings-window-manager';
 
 const scannerService = new ScannerService();
+const settingsWindowManager = new SettingsWindowManager();
+export { settingsWindowManager };
 const iconExtractionService = new IconExtractionService();
 let windowManager: WindowManager | null = null;
 
@@ -183,4 +186,22 @@ ipcMain.handle(CHANNELS.START_WINDOW_DRAG, async (event) => {
     // TODO: Implement drag functionality
   }
   return { success: true };
+});
+
+ipcMain.handle(CHANNELS.OPEN_SETTINGS_WINDOW, async () => {
+  try {
+    settingsWindowManager.openSettingsWindow();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+ipcMain.handle(CHANNELS.CLOSE_SETTINGS_WINDOW, async () => {
+  try {
+    settingsWindowManager.closeSettingsWindow();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
 });

@@ -2,7 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import path from 'path';
 
 import { WindowManager } from './app/window-manager';
-import { setWindowManager, getStore } from './ipc/handlers';
+import { setWindowManager, getStore, settingsWindowManager } from './ipc/handlers';
 import type { Settings } from './types/settings';
 import { DEFAULT_SETTINGS } from './types/settings';
 
@@ -14,6 +14,7 @@ app.whenReady().then(async () => {
   const wm = new WindowManager();
   setWindowManager(wm);
   mainWindow = await wm.createWindow(settings);
+  settingsWindowManager.setMainWindow(mainWindow);
 
   // Load the renderer
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -22,7 +23,7 @@ app.whenReady().then(async () => {
     // mainWindow.webContents.openDevTools();
   } else {
     await mainWindow.loadFile(
-      path.join(__dirname, '../renderer/index.html')
+      path.join(__dirname, '../../dist/renderer/index.html')
     );
   }
 

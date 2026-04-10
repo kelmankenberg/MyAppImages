@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { useSettingsStore } from '../store/settingsStore';
 import { DEFAULT_SETTINGS, Settings } from '../../main/types/settings';
 import { useAppImageStore } from '../store/appImageStore';
@@ -20,63 +21,52 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     }
   };
 
-  return (
+  const modalContent = (
     <div
       style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
         display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        width: '100vw',
-        backgroundColor: 'var(--bg-primary)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
       }}
+      onClick={handleOverlayClick}
     >
-      {/* Custom Title Bar */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 12px',
-          backgroundColor: 'var(--bg-secondary)',
-          borderBottom: '1px solid var(--border)',
-          cursor: 'default',
-          WebkitAppRegion: 'drag' as any,
-        }}
-      >
-        <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
-          Settings
-        </span>
-        <button
-          onClick={onClose}
-          style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '20px',
-            cursor: 'pointer',
-            color: 'var(--text-secondary)',
-            padding: '0 4px',
-            WebkitAppRegion: 'no-drag' as any,
-            lineHeight: 1,
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-          }}
-        >
-          ×
-        </button>
-      </div>
-
-      {/* Settings Content */}
-      <div
-        style={{
-          flex: 1,
+          backgroundColor: 'var(--bg-primary)',
+          borderRadius: '12px',
+          padding: '28px',
+          width: '550px',
+          maxWidth: '90vw',
+          maxHeight: '85vh',
           overflow: 'auto',
-          padding: '24px 28px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+          border: '1px solid var(--border)',
         }}
       >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h2 style={{ margin: 0, fontSize: '20px' }}>Settings</h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              color: 'var(--text-secondary)',
+              padding: '0 8px',
+            }}
+          >
+            ×
+          </button>
+        </div>
+
         {/* Scan Directories */}
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '14px' }}>
@@ -322,4 +312,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       </div>
     </div>
   );
+
+  // Render modal as a portal to document.body so it's not constrained by app window
+  return ReactDOM.createPortal(modalContent, document.body);
 };

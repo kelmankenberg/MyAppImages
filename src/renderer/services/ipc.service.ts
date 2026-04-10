@@ -31,3 +31,11 @@ export function quitApp() {
 export function startWindowDrag() {
   return electronAPI.invoke('req:start-window-drag');
 }
+
+export function openSettingsWindow() {
+  return electronAPI.invoke('req:open-settings-window');
+}
+
+export function closeSettingsWindow() {
+  return electronAPI.invoke('req:close-settings-window');
+}
