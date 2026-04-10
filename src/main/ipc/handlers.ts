@@ -4,12 +4,14 @@ import fs from 'fs';
 import Store from 'electron-store';
 import { CHANNELS } from './channels';
 import { ScannerService } from '../services/scanner.service';
+import { IconExtractionService } from '../services/icon-extraction.service';
 import type { AppImageEntry } from '../types/appImage';
 import type { Settings } from '../types/settings';
 import { DEFAULT_SETTINGS } from '../types/settings';
 import { WindowManager } from '../app/window-manager';
 
 const scannerService = new ScannerService();
+const iconExtractionService = new IconExtractionService();
 let windowManager: WindowManager | null = null;
 
 // Initialize persistent storage
@@ -33,29 +35,48 @@ ipcMain.handle(CHANNELS.SCAN_APPIMAGES, async (_event, _data) => {
   try {
     const result = await scannerService.scan(directories);
 
-    // Convert paths to AppImageEntry objects
-    const entries: AppImageEntry[] = result.paths.map((filePath) => {
-      const fileName = path.basename(filePath);
-      const id = Buffer.from(filePath).toString('base64');
-      const stats = fs.statSync(filePath);
+    // Extract icons from AppImages in parallel
+    const entriesWithIcons = await Promise.all(
+      result.paths.map(async (filePath) => {
+        const fileName = path.basename(filePath);
+        const id = Buffer.from(filePath).toString('base64');
+        const stats = fs.statSync(filePath);
 
-      return {
-        id,
-        name: fileName.replace(/\.appimage$/i, ''),
-        path: filePath,
-        icon: undefined,
-        version: undefined,
-        launchCount: 0,
-        dateAdded: new Date().toISOString(),
-        size: stats.size,
-        lastMtimeCheck: stats.mtimeMs,
-      };
-    });
+        // Extract icon for this AppImage
+        const iconPath = await iconExtractionService.extractIcon(filePath, stats.mtimeMs);
+
+        // Convert icon file to base64 data URL for renderer
+        let iconUrl: string | undefined;
+        if (iconPath && fs.existsSync(iconPath)) {
+          try {
+            const iconData = fs.readFileSync(iconPath);
+            const base64 = iconData.toString('base64');
+            const ext = path.extname(iconPath).toLowerCase();
+            const mimeType = ext === '.svg' ? 'image/svg+xml' : 'image/png';
+            iconUrl = `data:${mimeType};base64,${base64}`;
+          } catch {
+            iconUrl = undefined;
+          }
+        }
+
+        return {
+          id,
+          name: fileName.replace(/\.appimage$/i, ''),
+          path: filePath,
+          icon: iconUrl,
+          version: undefined,
+          launchCount: 0,
+          dateAdded: new Date().toISOString(),
+          size: stats.size,
+          lastMtimeCheck: stats.mtimeMs,
+        };
+      })
+    );
 
     return {
       success: true,
-      count: entries.length,
-      entries,
+      count: entriesWithIcons.length,
+      entries: entriesWithIcons,
       errors: result.errors,
       duration: Date.now() - startTime,
     };
@@ -159,7 +180,7 @@ ipcMain.handle(CHANNELS.QUIT_APP, async () => {
 ipcMain.handle(CHANNELS.START_WINDOW_DRAG, async (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (win) {
-    win.webContents.startDragging();
+    // TODO: Implement drag functionality
   }
   return { success: true };
 });

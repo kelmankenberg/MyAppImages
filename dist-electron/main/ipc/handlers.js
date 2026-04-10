@@ -10,8 +10,10 @@ const fs_1 = __importDefault(require("fs"));
 const electron_store_1 = __importDefault(require("electron-store"));
 const channels_1 = require("./channels");
 const scanner_service_1 = require("../services/scanner.service");
+const icon_extraction_service_1 = require("../services/icon-extraction.service");
 const settings_1 = require("../types/settings");
 const scannerService = new scanner_service_1.ScannerService();
+const iconExtractionService = new icon_extraction_service_1.IconExtractionService();
 let windowManager = null;
 // Initialize persistent storage
 const store = new electron_store_1.default({
@@ -31,27 +33,43 @@ electron_1.ipcMain.handle(channels_1.CHANNELS.SCAN_APPIMAGES, async (_event, _da
     const directories = currentSettings.scanDirectories;
     try {
         const result = await scannerService.scan(directories);
-        // Convert paths to AppImageEntry objects
-        const entries = result.paths.map((filePath) => {
+        // Extract icons from AppImages in parallel
+        const entriesWithIcons = await Promise.all(result.paths.map(async (filePath) => {
             const fileName = path_1.default.basename(filePath);
             const id = Buffer.from(filePath).toString('base64');
             const stats = fs_1.default.statSync(filePath);
+            // Extract icon for this AppImage
+            const iconPath = await iconExtractionService.extractIcon(filePath, stats.mtimeMs);
+            // Convert icon file to base64 data URL for renderer
+            let iconUrl;
+            if (iconPath && fs_1.default.existsSync(iconPath)) {
+                try {
+                    const iconData = fs_1.default.readFileSync(iconPath);
+                    const base64 = iconData.toString('base64');
+                    const ext = path_1.default.extname(iconPath).toLowerCase();
+                    const mimeType = ext === '.svg' ? 'image/svg+xml' : 'image/png';
+                    iconUrl = `data:${mimeType};base64,${base64}`;
+                }
+                catch {
+                    iconUrl = undefined;
+                }
+            }
             return {
                 id,
                 name: fileName.replace(/\.appimage$/i, ''),
                 path: filePath,
-                icon: undefined,
+                icon: iconUrl,
                 version: undefined,
                 launchCount: 0,
                 dateAdded: new Date().toISOString(),
                 size: stats.size,
                 lastMtimeCheck: stats.mtimeMs,
             };
-        });
+        }));
         return {
             success: true,
-            count: entries.length,
-            entries,
+            count: entriesWithIcons.length,
+            entries: entriesWithIcons,
             errors: result.errors,
             duration: Date.now() - startTime,
         };
@@ -140,7 +158,7 @@ electron_1.ipcMain.handle(channels_1.CHANNELS.QUIT_APP, async () => {
 electron_1.ipcMain.handle(channels_1.CHANNELS.START_WINDOW_DRAG, async (event) => {
     const win = electron_1.BrowserWindow.fromWebContents(event.sender);
     if (win) {
-        win.webContents.startDragging();
+        // TODO: Implement drag functionality
     }
     return { success: true };
 });
